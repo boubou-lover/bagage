@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getDatabase, ref, onValue, set, get, update } from 'firebase/database'
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-         createUserWithEmailAndPassword, signInWithPopup,
+         createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect,
          GoogleAuthProvider, signOut, updateProfile } from 'firebase/auth'
 import { getStorage, ref as storageRef, uploadBytesResumable,
          getDownloadURL, deleteObject } from 'firebase/storage'
