@@ -31,7 +31,7 @@ export const fbListen = (path, cb) => onValue(ref(db, path), snap => cb(snap.val
 
 export const signInEmail  = (e, p) => signInWithEmailAndPassword(auth, e, p)
 export const signUpEmail  = (e, p) => createUserWithEmailAndPassword(auth, e, p)
-export const signInGoogle = ()      => signInWithPopup(auth, gp)
+export const signInGoogle = () => signInWithRedirect(auth, gp)
 export const fbSignOut    = ()      => signOut(auth)
 export const fbUpdateProfile = (u, d) => updateProfile(u, d)
 export const onAuth       = (cb)    => onAuthStateChanged(auth, cb)
