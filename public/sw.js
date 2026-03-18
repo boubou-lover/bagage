@@ -1,5 +1,4 @@
-// Bump this version on each deploy to bust the cache
-const CACHE = 'bagage-v12.123';
+const CACHE = 'bagage-v13.0';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -16,7 +15,6 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Répondre à la demande de version depuis l'app
 self.addEventListener('message', e => {
   if (e.data?.type === 'GET_VERSION') {
     e.ports[0].postMessage({ version: CACHE });
@@ -26,23 +24,29 @@ self.addEventListener('message', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  // Always network-first for the HTML page itself
+  // Ne jamais intercepter Firebase, Google Auth, APIs externes
+  if (url.includes('firebase') || url.includes('googleapis') ||
+      url.includes('google.com') || url.includes('gstatic.com') ||
+      url.includes('unpkg.com') || url.includes('api.') ||
+      url.includes('fonts.') || url.includes('accounts.')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
+  // Network-first pour le HTML
   if (e.request.destination === 'document') {
     e.respondWith(
       fetch(e.request)
-        .then(r => { caches.open(CACHE).then(c => c.put(e.request, r.clone())); return r; })
+        .then(r => {
+          const clone = r.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+          return r;
+        })
         .catch(() => caches.match(e.request))
     );
     return;
   }
 
-  // Always network for Firebase, APIs, CDN libs
-  if (url.includes('firebase') || url.includes('googleapis') || url.includes('unpkg.com') ||
-      url.includes('api.') || url.includes('fonts.')) {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    return;
-  }
-
-  // Cache-first for icons and other static files
+  // Cache-first pour les fichiers statiques
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
 });
