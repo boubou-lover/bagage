@@ -1,5 +1,18 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { C } from '../constants'
+import {
+  Map, CalendarDays, Wallet, Luggage, FolderOpen, Info, ArrowLeftRight,
+  ChevronLeft, Users, Upload, Link, Trash2, Download, ExternalLink,
+  Image, FileText, File, PlusCircle, Share2, Copy, Check, Send, QrCode, X,
+  HelpCircle
+} from 'lucide-react'
+
+const ICONS = {
+  Map, CalendarDays, Wallet, Luggage, FolderOpen, Info, ArrowLeftRight,
+  ChevronLeft, Users, Upload, Link, Trash2, Download, ExternalLink,
+  Image, FileText, File, PlusCircle, Share2, Copy, Check, Send, QrCode, X,
+  HelpCircle
+}
 
 export const Input = ({ style = {}, ...p }) => (
   <input
@@ -77,9 +90,18 @@ export const Avatar = ({ name, photo, size=34 }) => {
 }
 
 export const Icon = ({ name, size=16, color="currentColor", strokeWidth=2, style={} }) => {
+  const LucideIcon = ICONS[name] || HelpCircle
+  return (
+    <span style={{display:"inline-flex",alignItems:"center",flexShrink:0,...style}}>
+      <LucideIcon size={size} color={color} strokeWidth={strokeWidth}/>
+    </span>
+  )
+}
+
+export const Icon_OLD = ({ name, size=16, color="currentColor", strokeWidth=2, style={} }) => {
   const ref = useRef(null)
   useEffect(() => {
-    import('lucide-react').then(lucide => {
+    import('lucide').then(lucide => {
       if (!ref.current) return
       ref.current.innerHTML = ""
       const icon = lucide.createElement(lucide[name] || lucide.HelpCircle)
