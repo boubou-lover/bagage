@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { C } from './constants'
-import { onAuth, fbSet, fbGet } from './firebase'
+import { onAuth, fbSet, fbGet, fbSignOut } from './firebase'
+import { getRedirectResult } from 'firebase/auth'
+import { auth } from './firebase'
 import { Spinner } from './components/atoms'
 import AuthScreen from './components/AuthScreen'
 import TripListScreen from './components/TripListScreen'
 import TripApp from './components/TripApp'
-import { fbSignOut } from './firebase'
 
 export default function App() {
   const [authState,setAuthState]   = useState("loading")
@@ -13,6 +14,15 @@ export default function App() {
   const [currentTrip,setCurrentTrip] = useState(null)
 
   useEffect(() => {
+    // Gérer le résultat du redirect Google
+    getRedirectResult(auth).then(result => {
+      if (result?.user) {
+        setUser(result.user)
+        setAuthState("auth")
+      }
+    }).catch(() => {})
+
+    // Auth listener
     onAuth(u => {
       if (u) { setUser(u); setAuthState("auth") }
       else   { setUser(null); setAuthState("unauth"); setCurrentTrip(null) }
