@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import { C } from '../constants'
 import {
   Map, CalendarDays, Wallet, Luggage, FolderOpen, Info, ArrowLeftRight,
@@ -96,26 +95,6 @@ export const Icon = ({ name, size=16, color="currentColor", strokeWidth=2, style
       <LucideIcon size={size} color={color} strokeWidth={strokeWidth}/>
     </span>
   )
-}
-
-export const Icon_OLD = ({ name, size=16, color="currentColor", strokeWidth=2, style={} }) => {
-  const ref = useRef(null)
-  useEffect(() => {
-    import('lucide').then(lucide => {
-      if (!ref.current) return
-      ref.current.innerHTML = ""
-      const icon = lucide.createElement(lucide[name] || lucide.HelpCircle)
-      icon.setAttribute("width", size)
-      icon.setAttribute("height", size)
-      icon.setAttribute("stroke", color)
-      icon.setAttribute("stroke-width", strokeWidth)
-      icon.setAttribute("fill", "none")
-      icon.setAttribute("stroke-linecap", "round")
-      icon.setAttribute("stroke-linejoin", "round")
-      ref.current.appendChild(icon)
-    })
-  }, [name, size, color])
-  return <span ref={ref} style={{display:"inline-flex",alignItems:"center",flexShrink:0,...style}}/>
 }
 
 export const PieChart = ({ data, size=130 }) => {
