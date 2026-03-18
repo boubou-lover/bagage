@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getDatabase, ref, onValue, set, get, update } from 'firebase/database'
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-         createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect,
+         createUserWithEmailAndPassword, signInWithPopup,
          GoogleAuthProvider, signOut, updateProfile } from 'firebase/auth'
 import { getStorage, ref as storageRef, uploadBytesResumable,
          getDownloadURL, deleteObject } from 'firebase/storage'
@@ -20,21 +20,22 @@ const db      = getDatabase(app)
 const auth    = getAuth(app)
 const storage = getStorage(app)
 const gp      = new GoogleAuthProvider()
+gp.setCustomParameters({ prompt: 'select_account' })
 
 export { auth, gp }
 
-export const fbRef  = (p) => ref(db, p)
-export const fbSet  = (path, data) => set(ref(db, path), data)
-export const fbGet  = async (path) => { const snap = await get(ref(db, path)); return snap.val() }
+export const fbRef    = (p) => ref(db, p)
+export const fbSet    = (path, data) => set(ref(db, path), data)
+export const fbGet    = async (path) => { const snap = await get(ref(db, path)); return snap.val() }
 export const fbUpdate = (path, data) => update(ref(db, path), data)
-export const fbListen = (path, cb) => onValue(ref(db, path), snap => cb(snap.val()))
+export const fbListen = (path, cb)   => onValue(ref(db, path), snap => cb(snap.val()))
 
-export const signInEmail  = (e, p) => signInWithEmailAndPassword(auth, e, p)
-export const signUpEmail  = (e, p) => createUserWithEmailAndPassword(auth, e, p)
-export const signInGoogle = () => signInWithRedirect(auth, gp)
-export const fbSignOut    = ()      => signOut(auth)
+export const signInEmail     = (e, p) => signInWithEmailAndPassword(auth, e, p)
+export const signUpEmail     = (e, p) => createUserWithEmailAndPassword(auth, e, p)
+export const signInGoogle    = ()     => signInWithPopup(auth, gp)
+export const fbSignOut       = ()     => signOut(auth)
 export const fbUpdateProfile = (u, d) => updateProfile(u, d)
-export const onAuth       = (cb)    => onAuthStateChanged(auth, cb)
+export const onAuth          = (cb)   => onAuthStateChanged(auth, cb)
 
 export const uploadFile = async (tripId, file) => {
   const ext  = file.name.split('.').pop()
