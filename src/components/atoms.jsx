@@ -79,7 +79,7 @@ export const Avatar = ({ name, photo, size=34 }) => {
 export const Icon = ({ name, size=16, color="currentColor", strokeWidth=2, style={} }) => {
   const ref = useRef(null)
   useEffect(() => {
-    import('lucide').then(lucide => {
+    import('lucide-react').then(lucide => {
       if (!ref.current) return
       ref.current.innerHTML = ""
       const icon = lucide.createElement(lucide[name] || lucide.HelpCircle)
