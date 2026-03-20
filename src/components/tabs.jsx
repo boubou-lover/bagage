@@ -286,17 +286,11 @@ export function TabBudget({ expenses, setExpenses, budget, setBudget, currency, 
 }
 
 /* ── Tab Bagages ── */
-/* Remplace la fonction TabBagages dans src/components/tabs.jsx */
- 
-import { useState } from 'react'
-import { C, PACK_ITEMS, uid } from '../constants'
-import { Input, Btn, Card, Label, Icon } from './atoms'
- 
-export function TabBagages({ checked, setChecked, customItems, setCustomItems }) {
-  const [newItem, setNewItem] = useState({})   // { [catId]: string }
- 
+export function TabBagages({ checked, setChecked, customItems = {}, setCustomItems }) {
+  const [newItem, setNewItem] = useState({})
+
   const toggle = id => setChecked(p => ({ ...p, [id]: !p[id] }))
- 
+
   const addItem = catId => {
     const text = (newItem[catId] || "").trim()
     if (!text) return
@@ -304,132 +298,93 @@ export function TabBagages({ checked, setChecked, customItems, setCustomItems })
     setCustomItems(p => ({ ...p, [catId]: [...(p[catId] || []), { id, text }] }))
     setNewItem(p => ({ ...p, [catId]: "" }))
   }
- 
+
   const removeItem = (catId, id) => {
     setCustomItems(p => ({ ...p, [catId]: (p[catId] || []).filter(i => i.id !== id) }))
-    // Retire aussi de checked si coché
     setChecked(p => { const next = { ...p }; delete next[id]; return next })
   }
- 
+
   const allItems = cat => [
     ...cat.items.map(text => ({ id: `${cat.id}__${text}`, text, custom: false })),
     ...(customItems[cat.id] || []).map(i => ({ ...i, custom: true })),
   ]
- 
+
   const total = PACK_ITEMS.reduce((s, c) => s + c.items.length + (customItems[c.id]?.length || 0), 0)
   const done  = Object.values(checked || {}).filter(Boolean).length
- 
+
   return (
     <div className="fade-up">
-      {/* Progression */}
-      <Card style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 36, marginBottom: 6 }}>🧳</div>
-        <div style={{ fontWeight: 800, fontSize: 22, color: C.text, marginBottom: 4 }}>{done}/{total}</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>articles préparés</div>
-        <div style={{ height: 6, borderRadius: 3, background: C.border, overflow: "hidden" }}>
-          <div style={{
-            height: "100%", borderRadius: 3,
-            background: done === total && total > 0
+      <Card style={{textAlign:"center"}}>
+        <div style={{fontSize:36,marginBottom:6}}>🧳</div>
+        <div style={{fontWeight:800,fontSize:22,color:C.text,marginBottom:4}}>{done}/{total}</div>
+        <div style={{fontSize:13,color:C.muted,marginBottom:12}}>articles préparés</div>
+        <div style={{height:6,borderRadius:3,background:C.border,overflow:"hidden"}}>
+          <div style={{height:"100%",borderRadius:3,
+            background: done===total&&total>0
               ? `linear-gradient(90deg,${C.green},${C.teal})`
               : `linear-gradient(90deg,${C.accent},${C.sky})`,
-            width: `${total > 0 ? (done / total) * 100 : 0}%`,
-            transition: "width .5s"
-          }}/>
+            width:`${total>0?(done/total)*100:0}%`,transition:"width .5s"}}/>
         </div>
       </Card>
- 
-      {/* Catégories */}
+
       {PACK_ITEMS.map(cat => {
         const items = allItems(cat)
-        const catDone = items.filter(i => !!(checked || {})[i.id]).length
- 
+        const catDone = items.filter(i => !!(checked||{})[i.id]).length
         return (
           <Card key={cat.id}>
-            {/* En-tête catégorie */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <Label style={{ marginBottom: 0 }}>{cat.icon} {cat.label}</Label>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <Label>{cat.icon} {cat.label}</Label>
               <span style={{
-                fontSize: 12, fontWeight: 600, color: catDone === items.length && items.length > 0 ? C.green : C.muted,
-                background: catDone === items.length && items.length > 0 ? C.greenSoft : C.surface2,
-                border: `1px solid ${catDone === items.length && items.length > 0 ? C.green + "40" : C.border}`,
-                borderRadius: 20, padding: "2px 10px", transition: "all .2s"
+                fontSize:12,fontWeight:600,borderRadius:20,padding:"2px 10px",
+                color: catDone===items.length&&items.length>0 ? C.green : C.muted,
+                background: catDone===items.length&&items.length>0 ? C.greenSoft : C.surface2,
+                border:`1px solid ${catDone===items.length&&items.length>0 ? C.green+"40" : C.border}`,
+                transition:"all .2s"
               }}>
                 {catDone}/{items.length}
               </span>
             </div>
- 
-            {/* Items */}
+
             {items.map(item => {
-              const chk = !!(checked || {})[item.id]
+              const chk = !!(checked||{})[item.id]
               return (
-                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                  <div
-                    className="check-item"
-                    onClick={() => toggle(item.id)}
-                    style={{
-                      flex: 1, display: "flex", alignItems: "center", gap: 12,
-                      padding: "10px 12px", borderRadius: 10, cursor: "pointer",
-                      background: chk ? C.greenSoft : "transparent",
-                    }}
-                  >
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                      border: `2px solid ${chk ? C.green : C.border}`,
-                      background: chk ? C.green : "white",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "all .15s"
-                    }}>
-                      {chk && <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>✓</span>}
+                <div key={item.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                  <div className="check-item" onClick={()=>toggle(item.id)}
+                    style={{flex:1,display:"flex",alignItems:"center",gap:12,padding:"10px 12px",
+                      borderRadius:10,cursor:"pointer",background:chk?C.greenSoft:"transparent"}}>
+                    <div style={{width:22,height:22,borderRadius:6,flexShrink:0,
+                      border:`2px solid ${chk?C.green:C.border}`,background:chk?C.green:"white",
+                      display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+                      {chk&&<span style={{color:"white",fontSize:13,fontWeight:700}}>✓</span>}
                     </div>
-                    <span style={{
-                      fontSize: 14, lineHeight: 1.4,
-                      color: chk ? C.green : C.text,
-                      textDecoration: chk ? "line-through" : "none",
-                      transition: "all .15s",
-                      flex: 1,
-                    }}>
+                    <span style={{fontSize:14,color:chk?C.green:C.text,
+                      textDecoration:chk?"line-through":"none",transition:"all .15s",flex:1}}>
                       {item.text}
                     </span>
                   </div>
- 
-                  {/* Bouton supprimer (custom seulement) */}
                   {item.custom && (
-                    <button
-                      onClick={() => removeItem(cat.id, item.id)}
-                      style={{
-                        background: "none", border: "none", color: C.muted,
-                        cursor: "pointer", fontSize: 16, padding: "4px 6px",
-                        borderRadius: 6, flexShrink: 0,
-                        transition: "color .15s",
-                      }}
-                      onMouseEnter={e => e.target.style.color = C.red}
-                      onMouseLeave={e => e.target.style.color = C.muted}
-                      title="Supprimer"
-                    >
+                    <button onClick={()=>removeItem(cat.id, item.id)}
+                      style={{background:"none",border:"none",color:C.muted,cursor:"pointer",
+                        fontSize:18,padding:"4px 8px",borderRadius:6,flexShrink:0}}>
                       ×
                     </button>
                   )}
                 </div>
               )
             })}
- 
+
             {/* Champ d'ajout */}
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <div style={{display:"flex",gap:8,marginTop:12,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
               <Input
-                value={newItem[cat.id] || ""}
-                onChange={e => setNewItem(p => ({ ...p, [cat.id]: e.target.value }))}
-                onKeyDown={e => e.key === "Enter" && addItem(cat.id)}
+                value={newItem[cat.id]||""}
+                onChange={e=>setNewItem(p=>({...p,[cat.id]:e.target.value}))}
+                onKeyDown={e=>e.key==="Enter"&&addItem(cat.id)}
                 placeholder="Ajouter un article…"
-                style={{ flex: 1, fontSize: 13, padding: "9px 12px" }}
+                style={{flex:1,fontSize:13,padding:"9px 12px"}}
               />
-              <Btn
-                variant="accent"
-                small
-                onClick={() => addItem(cat.id)}
-                disabled={!(newItem[cat.id] || "").trim()}
-                style={{ padding: "9px 14px", flexShrink: 0 }}
-              >
-                <Icon name="PlusCircle" size={15} color={C.accent} /> Ajouter
+              <Btn variant="accent" small onClick={()=>addItem(cat.id)}
+                disabled={!(newItem[cat.id]||"").trim()}>
+                + Ajouter
               </Btn>
             </div>
           </Card>
