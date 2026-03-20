@@ -17,6 +17,7 @@ export default function TripApp({ user, trip, onBack }) {
   const [currency,setCurrency]       = useState(trip.currency||"EUR")
   const [checked,setChecked]         = useState(trip.checked||{})
   const [customItems,setCustomItems] = useState(trip.customItems||{})
+  const [removedItems,setRemovedItems] = useState(trip.removedItems||{})
   const [members,setMembers]         = useState(trip.members||{})
   const [withDevises,setWithDevises] = useState(trip.withDevises!==false)
   const [info,setInfo]               = useState(trip.info||{})
@@ -33,16 +34,17 @@ export default function TripApp({ user, trip, onBack }) {
     fbListen(`trips/${trip.id}`, data => {
       if (!data) return
       isRemote.current = true
-      if (typeof data.destination==="string")           setDestination(data.destination)
-      if (Array.isArray(data.days)&&data.days.length>0) setDays(data.days)
-      if (Array.isArray(data.expenses))                 setExpenses(data.expenses)
+      if (typeof data.destination==="string")                            setDestination(data.destination)
+      if (Array.isArray(data.days)&&data.days.length>0)                 setDays(data.days)
+      if (Array.isArray(data.expenses))                                  setExpenses(data.expenses)
       if (typeof data.budget==="string"||typeof data.budget==="number") setBudget(data.budget)
-      if (data.currency)                                setCurrency(data.currency)
-      if (data.checked&&typeof data.checked==="object") setChecked(data.checked)
-      if (data.members&&typeof data.members==="object") setMembers(data.members)
-      if (typeof data.withDevises==="boolean")          setWithDevises(data.withDevises)
-      if (data.info&&typeof data.info==="object")       setInfo(data.info)
-      if (data.customItems&&typeof data.customItems==="object") setCustomItems(data.customItems)
+      if (data.currency)                                                 setCurrency(data.currency)
+      if (data.checked&&typeof data.checked==="object")                 setChecked(data.checked)
+      if (data.members&&typeof data.members==="object")                 setMembers(data.members)
+      if (typeof data.withDevises==="boolean")                          setWithDevises(data.withDevises)
+      if (data.info&&typeof data.info==="object")                       setInfo(data.info)
+      if (data.customItems&&typeof data.customItems==="object")         setCustomItems(data.customItems)
+      if (data.removedItems&&typeof data.removedItems==="object")       setRemovedItems(data.removedItems)
       initialized.current = true
       setTimeout(() => { isRemote.current = false }, 200)
     })
@@ -50,8 +52,8 @@ export default function TripApp({ user, trip, onBack }) {
 
   useEffect(() => {
     if (isRemote.current||!initialized.current) return
-    saveRef.current(`trips/${trip.id}`, {destination,days,expenses,budget,currency,checked,customItems,withDevises,info})
-  }, [destination,days,expenses,budget,currency,checked,customItems])
+    saveRef.current(`trips/${trip.id}`, {destination,days,expenses,budget,currency,checked,customItems,removedItems,withDevises,info})
+  }, [destination,days,expenses,budget,currency,checked,customItems,removedItems])
 
   const memberCount = Object.keys(members).length
 
@@ -105,6 +107,8 @@ export default function TripApp({ user, trip, onBack }) {
           setChecked={setChecked}
           customItems={customItems}
           setCustomItems={setCustomItems}
+          removedItems={removedItems}
+          setRemovedItems={setRemovedItems}
         />}
         {tab==="docs"      && <TabDocs       tripId={trip.id} user={user}/>}
         {tab==="info"      && <TabInfo       info={info} setInfo={setInfo} currency={currency} withDevises={withDevises} setWithDevises={setWithDevises}/>}

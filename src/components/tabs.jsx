@@ -286,9 +286,8 @@ export function TabBudget({ expenses, setExpenses, budget, setBudget, currency, 
 }
 
 /* ── Tab Bagages ── */
-export function TabBagages({ checked, setChecked, customItems = {}, setCustomItems }) {
+export function TabBagages({ checked, setChecked, customItems={}, setCustomItems, removedItems={}, setRemovedItems }) {
   const [newItem, setNewItem] = useState({})
-  const [removedItems, setRemovedItems] = useState({}) // { "catId__itemText": true }
 
   const toggle = id => setChecked(p => ({ ...p, [id]: !p[id] }))
 
@@ -371,8 +370,7 @@ export function TabBagages({ checked, setChecked, customItems = {}, setCustomIte
                   </div>
                   <button onClick={()=>removeItem(cat.id, item)}
                     style={{background:"none",border:"none",color:C.muted,cursor:"pointer",
-                      fontSize:18,padding:"4px 8px",borderRadius:6,flexShrink:0,
-                      transition:"color .15s"}}
+                      fontSize:18,padding:"4px 8px",borderRadius:6,flexShrink:0,transition:"color .15s"}}
                     onMouseEnter={e=>e.currentTarget.style.color=C.red}
                     onMouseLeave={e=>e.currentTarget.style.color=C.muted}>
                     ×
