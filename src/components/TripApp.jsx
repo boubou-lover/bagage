@@ -16,6 +16,7 @@ export default function TripApp({ user, trip, onBack }) {
   const [budget,setBudget]           = useState(trip.budget||"")
   const [currency,setCurrency]       = useState(trip.currency||"EUR")
   const [checked,setChecked]         = useState(trip.checked||{})
+  const [customItems,setCustomItems] = useState(trip.customItems||{})
   const [members,setMembers]         = useState(trip.members||{})
   const [withDevises,setWithDevises] = useState(trip.withDevises!==false)
   const [info,setInfo]               = useState(trip.info||{})
@@ -28,7 +29,6 @@ export default function TripApp({ user, trip, onBack }) {
     setTimeout(() => setSyncing(false), 1000)
   }, 1500))
 
-  // Listen Firebase → state
   useEffect(() => {
     fbListen(`trips/${trip.id}`, data => {
       if (!data) return
@@ -42,16 +42,16 @@ export default function TripApp({ user, trip, onBack }) {
       if (data.members&&typeof data.members==="object") setMembers(data.members)
       if (typeof data.withDevises==="boolean")          setWithDevises(data.withDevises)
       if (data.info&&typeof data.info==="object")       setInfo(data.info)
+      if (data.customItems&&typeof data.customItems==="object") setCustomItems(data.customItems)
       initialized.current = true
       setTimeout(() => { isRemote.current = false }, 200)
     })
   }, [trip.id])
 
-  // state → Firebase (debounced)
   useEffect(() => {
     if (isRemote.current||!initialized.current) return
-    saveRef.current(`trips/${trip.id}`, {destination,days,expenses,budget,currency,checked,withDevises,info})
-  }, [destination,days,expenses,budget,currency,checked])
+    saveRef.current(`trips/${trip.id}`, {destination,days,expenses,budget,currency,checked,customItems,withDevises,info})
+  }, [destination,days,expenses,budget,currency,checked,customItems])
 
   const memberCount = Object.keys(members).length
 
@@ -100,7 +100,12 @@ export default function TripApp({ user, trip, onBack }) {
         {tab==="synthese"  && <TabSynthese   days={days} expenses={expenses} destination={destination} currency={currency}/>}
         {tab==="programme" && <TabProgramme  days={days} setDays={setDays} destination={destination}/>}
         {tab==="budget"    && <TabBudget     expenses={expenses} setExpenses={setExpenses} budget={budget} setBudget={setBudget} currency={currency} setCurrency={setCurrency} days={days} members={members}/>}
-        {tab==="bagages"   && <TabBagages    checked={checked} setChecked={setChecked}/>}
+        {tab==="bagages"   && <TabBagages
+          checked={checked}
+          setChecked={setChecked}
+          customItems={customItems}
+          setCustomItems={setCustomItems}
+        />}
         {tab==="docs"      && <TabDocs       tripId={trip.id} user={user}/>}
         {tab==="info"      && <TabInfo       info={info} setInfo={setInfo} currency={currency} withDevises={withDevises} setWithDevises={setWithDevises}/>}
         {tab==="convertir" && <TabConvertisseur currency={currency}/>}
