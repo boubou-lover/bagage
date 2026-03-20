@@ -205,19 +205,35 @@ export default function TripListScreen({ user, onSelectTrip, onSignOut }) {
 }
 
 function AppFooter() {
-  const [version,setVersion] = useState("…")
+  const [version, setVersion] = useState("…")
+
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return
+    if (!("serviceWorker" in navigator)) { setVersion("no sw"); return }
+
+    const ask = sw => {
+      const mc = new MessageChannel()
+      mc.port1.onmessage = e => { if (e.data?.version) setVersion(e.data.version) }
+      sw.postMessage({ type: "GET_VERSION" }, [mc.port2])
+    }
+
     navigator.serviceWorker.getRegistration().then(reg => {
-      if (!reg) return
-      const sw = reg.active||reg.installing||reg.waiting
+      if (!reg) { setVersion("no reg"); return }
+
+      const sw = reg.active || reg.installing || reg.waiting
       if (sw) {
-        const mc = new MessageChannel()
-        mc.port1.onmessage = e => { if (e.data?.version) setVersion(e.data.version) }
-        sw.postMessage({type:"GET_VERSION"}, [mc.port2])
+        // Si déjà actif, on demande directement
+        if (sw.state === "activated") { ask(sw); return }
+        // Sinon on attend qu'il soit actif
+        sw.addEventListener("statechange", function handler() {
+          if (this.state === "activated") {
+            ask(this)
+            this.removeEventListener("statechange", handler)
+          }
+        })
       }
     })
   }, [])
+
   return (
     <div className="app-footer">
       <div className="footer-logo">✈️</div>
