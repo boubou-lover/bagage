@@ -400,45 +400,343 @@ export function TabBagages({ checked, setChecked, customItems={}, setCustomItems
 }
 
 /* ── Tab Info ── */
-export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }) {
-  const upd = (k,v) => setInfo(p=>({...p,[k]:v}))
-  const SECTIONS = [
-    {key:"hebergement",icon:"🏨",label:"Hébergement",fields:[{k:"adresse",label:"Adresse",placeholder:"123 rue de la Paix, Paris"},{k:"telephone",label:"Téléphone",placeholder:"+33 1 23 45 67 89"},{k:"codeWifi",label:"Code WiFi",placeholder:"MonWifi2024"},{k:"checkIn",label:"Check-in",placeholder:"15h00"},{k:"checkOut",label:"Check-out",placeholder:"11h00"},{k:"confirmation",label:"N° confirmation",placeholder:"ABC123456"}]},
-    {key:"transport",icon:"✈️",label:"Transport",fields:[{k:"vol",label:"N° vol / train",placeholder:"AF1234"},{k:"aeroport",label:"Aéroport / gare",placeholder:"CDG Terminal 2E"},{k:"depart",label:"Heure départ",placeholder:"08h30"},{k:"arrivee",label:"Heure arrivée",placeholder:"14h15"},{k:"compagnie",label:"Compagnie",placeholder:"Air France"}]},
-    {key:"urgences",icon:"🆘",label:"Urgences & Ambassade",fields:[{k:"urgence",label:"N° urgences local",placeholder:"112 / 911"},{k:"ambassade",label:"Ambassade",placeholder:"+33 1 44 05 31 00"},{k:"assurance",label:"N° assurance",placeholder:"0800 123 456"},{k:"hopital",label:"Hôpital proche",placeholder:"Hôpital Central"}]},
-    {key:"contacts",icon:"👥",label:"Contacts locaux",fields:[{k:"contact1nom",label:"Contact 1 — Nom",placeholder:"Marie Dupont"},{k:"contact1tel",label:"Contact 1 — Tél",placeholder:"+81 90 1234 5678"},{k:"contact2nom",label:"Contact 2 — Nom",placeholder:"Guide local"},{k:"contact2tel",label:"Contact 2 — Tél",placeholder:"+81 80 9876 5432"}]},
-    {key:"divers",icon:"📝",label:"Divers",fields:[{k:"notes",label:"Notes libres",placeholder:"Infos pratiques, adresses, conseils…"}]},
-  ]
+/* ── Constantes locales ── */
+const PLACE_CATS = [
+  { id: "hebergement", label: "Hébergement", icon: "🏨", color: "#0d9488" },
+  { id: "restaurant",  label: "Restaurant",  icon: "🍽️", color: "#ea580c" },
+  { id: "musee",       label: "Musée / Site", icon: "🏛️", color: "#7c3aed" },
+  { id: "transport",   label: "Transport",   icon: "🚉", color: "#0ea5e9" },
+  { id: "shopping",    label: "Shopping",    icon: "🛍️", color: "#dc2626" },
+  { id: "contact",     label: "Contact",     icon: "👤", color: "#2563eb" },
+  { id: "autre",       label: "Autre",       icon: "📍", color: "#64748b" },
+]
+ 
+/* Géocode une adresse via Nominatim (OSM) */
+async function geocode(query) {
+  const r = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+    { headers: { "Accept-Language": "fr" } }
+  )
+  const d = await r.json()
+  if (!d.length) throw new Error("Adresse introuvable")
+  return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), display: d[0].display_name }
+}
+ 
+/* ── Carte Leaflet ── */
+function InfoMap({ places }) {
+  const mapRef    = useRef(null)
+  const mapObj    = useRef(null)
+  const markersRef = useRef([])
+ 
+  useEffect(() => {
+    // Charger Leaflet CSS dynamiquement
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link")
+      link.id   = "leaflet-css"
+      link.rel  = "stylesheet"
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      document.head.appendChild(link)
+    }
+    // Charger Leaflet JS
+    const load = () => {
+      if (!mapRef.current || mapObj.current) return
+      const L = window.L
+      if (!L) return
+      mapObj.current = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors", maxZoom: 19
+      }).addTo(mapObj.current)
+    }
+    if (window.L) { load() }
+    else {
+      const script = document.createElement("script")
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      script.onload = load
+      document.head.appendChild(script)
+    }
+    return () => { if (mapObj.current) { mapObj.current.remove(); mapObj.current = null } }
+  }, [])
+ 
+  useEffect(() => {
+    const L = window.L
+    if (!L || !mapObj.current) return
+    // Nettoyer anciens marqueurs
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current = []
+    const valid = places.filter(p => p.lat && p.lng)
+    if (!valid.length) return
+    valid.forEach(p => {
+      const cat = PLACE_CATS.find(c => c.id === p.category) || PLACE_CATS[6]
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="
+          background:${cat.color};color:white;border-radius:50%;
+          width:32px;height:32px;display:flex;align-items:center;
+          justify-content:center;font-size:15px;
+          box-shadow:0 2px 8px rgba(0,0,0,0.25);
+          border:2px solid white;">${cat.icon}</div>`,
+        iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -18]
+      })
+      const marker = L.marker([p.lat, p.lng], { icon })
+        .bindPopup(`
+          <div style="font-family:'DM Sans',sans-serif;min-width:160px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${p.name}</div>
+            ${p.address ? `<div style="font-size:12px;color:#64748b;margin-bottom:4px">${p.address}</div>` : ""}
+            ${p.note    ? `<div style="font-size:12px;color:#475569;font-style:italic">${p.note}</div>` : ""}
+          </div>`)
+        .addTo(mapObj.current)
+      markersRef.current.push(marker)
+    })
+    // Centrer sur les marqueurs
+    if (valid.length === 1) {
+      mapObj.current.setView([valid[0].lat, valid[0].lng], 14)
+    } else {
+      const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]))
+      mapObj.current.fitBounds(bounds, { padding: [40, 40] })
+    }
+  }, [places])
+ 
   return (
-    <div className="fade-up">
-      <Card style={{marginBottom:12}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div><div style={{fontWeight:600,fontSize:14,color:C.text}}>Onglet Devises</div><div style={{fontSize:12,color:C.muted,marginTop:2}}>Utile si la devise locale est différente</div></div>
-          <button onClick={()=>setWithDevises(v=>!v)} style={{width:44,height:24,borderRadius:12,background:withDevises?C.accent:C.border,border:"none",cursor:"pointer",transition:"background .2s",position:"relative",flexShrink:0}}>
-            <span style={{position:"absolute",top:3,left:withDevises?22:3,width:18,height:18,borderRadius:"50%",background:"white",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
-          </button>
+    <div ref={mapRef} style={{
+      height: 280, borderRadius: 14, overflow: "hidden",
+      border: `1px solid ${C.border}`, marginBottom: 14,
+      background: "#e8f0f7"
+    }}/>
+  )
+}
+ 
+/* ── Formulaire d'ajout/édition d'une adresse ── */
+function PlaceForm({ initial, onSave, onCancel }) {
+  const [form, setForm]       = useState(initial || { name: "", address: "", category: "hebergement", note: "" })
+  const [geocoding, setGeocoding] = useState(false)
+  const [geoErr, setGeoErr]   = useState("")
+ 
+  const handleGeocode = async () => {
+    if (!form.address.trim()) return
+    setGeocoding(true); setGeoErr("")
+    try {
+      const { lat, lng } = await geocode(form.address)
+      setForm(f => ({ ...f, lat, lng }))
+    } catch { setGeoErr("Adresse introuvable — vérifie et réessaie") }
+    setGeocoding(false)
+  }
+ 
+  const isValid = form.name.trim() && form.address.trim()
+ 
+  return (
+    <div style={{ background: C.surface2, border: `1.5px solid ${C.borderFocus}`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+        <div style={{ gridColumn: "1/-1" }}>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Nom *</div>
+          <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Hôtel Sakura"/>
         </div>
-      </Card>
-      {SECTIONS.map(sec=>(
-        <Card key={sec.key} style={{marginBottom:12}}>
-          <Label>{sec.icon} {sec.label}</Label>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            {sec.fields.map(f=>(
-              <div key={f.k} style={{gridColumn:f.k==="notes"||f.k==="adresse"?"1/-1":"auto"}}>
-                <div style={{fontSize:11,color:C.mutedDark,marginBottom:4,fontWeight:600}}>{f.label}</div>
-                {f.k==="notes"
-                  ?<textarea value={info[sec.key]?.[f.k]||""} onChange={e=>upd(sec.key,{...info[sec.key],[f.k]:e.target.value})} placeholder={f.placeholder} style={{background:"white",border:`1.5px solid ${C.border}`,borderRadius:10,color:C.text,padding:"10px 14px",fontSize:13,outline:"none",fontFamily:"inherit",width:"100%",minHeight:80,resize:"vertical"}}/>
-                  :<Input value={info[sec.key]?.[f.k]||""} onChange={e=>upd(sec.key,{...info[sec.key],[f.k]:e.target.value})} placeholder={f.placeholder}/>
-                }
-              </div>
-            ))}
+        <div>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Catégorie</div>
+          <Sel value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ width: "100%" }}>
+            {PLACE_CATS.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+          </Sel>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Note</div>
+          <Input value={form.note || ""} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Chambre 204, code #1234…"/>
+        </div>
+        <div style={{ gridColumn: "1/-1" }}>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Adresse *</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Input
+              value={form.address}
+              onChange={e => setForm(f => ({ ...f, address: e.target.value, lat: null, lng: null }))}
+              onKeyDown={e => e.key === "Enter" && handleGeocode()}
+              placeholder="123 rue de la Paix, Tokyo"
+              style={{ flex: 1 }}
+            />
+            <Btn variant={form.lat ? "green" : "accent"} small onClick={handleGeocode} disabled={!form.address.trim()} loading={geocoding} style={{ flexShrink: 0 }}>
+              {form.lat ? "✓ Localisé" : "📍 Localiser"}
+            </Btn>
           </div>
-        </Card>
-      ))}
+          {geoErr && <div style={{ fontSize: 12, color: C.red, marginTop: 4 }}>⚠️ {geoErr}</div>}
+          {!form.lat && !geoErr && form.address && <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Clique sur "Localiser" pour placer sur la carte</div>}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn onClick={() => onSave(form)} disabled={!isValid}>Enregistrer</Btn>
+        <Btn variant="ghost" onClick={onCancel}>Annuler</Btn>
+      </div>
     </div>
   )
 }
-
+ 
+/* ── Carte d'une adresse ── */
+function PlaceCard({ place, onEdit, onDelete }) {
+  const cat = PLACE_CATS.find(c => c.id === place.category) || PLACE_CATS[6]
+  return (
+    <div style={{
+      background: "white", border: `1px solid ${C.border}`, borderRadius: 12,
+      padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "flex-start", gap: 12,
+      boxShadow: C.shadow
+    }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+        background: cat.color + "18", border: `1px solid ${cat.color}30`,
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18
+      }}>
+        {cat.icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 2 }}>{place.name}</div>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: place.note ? 4 : 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {place.address}
+        </div>
+        {place.note && <div style={{ fontSize: 12, color: C.textSoft, fontStyle: "italic" }}>{place.note}</div>}
+        <div style={{ marginTop: 4 }}>
+          <Tag color={cat.color} soft={cat.color + "18"}>{cat.icon} {cat.label}</Tag>
+          {place.lat && <span style={{ fontSize: 11, color: C.green, marginLeft: 6 }}>📍 Sur la carte</span>}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+        <button onClick={onEdit} style={{ background: C.accentSoft, border: `1px solid #bfdbfe`, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 13 }}>✏️</button>
+        <button onClick={onDelete} style={{ background: C.redSoft, border: `1px solid #fecaca`, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 13 }}>🗑</button>
+      </div>
+    </div>
+  )
+}
+ 
+/* ── Tab Info principal ── */
+export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }) {
+  const upd = (k, v) => setInfo(p => ({ ...p, [k]: v }))
+ 
+  // places = liste d'adresses/lieux, stockée dans info.places
+  const places    = info.places || []
+  const setPlaces = newPlaces => setInfo(p => ({ ...p, places: newPlaces }))
+ 
+  const [showForm, setShowForm]   = useState(false)
+  const [editIdx,  setEditIdx]    = useState(null)   // index en cours d'édition
+  const [openSection, setOpenSection] = useState(null) // section dépliée
+ 
+  const savePlace = form => {
+    if (editIdx !== null) {
+      const next = [...places]; next[editIdx] = { ...next[editIdx], ...form }
+      setPlaces(next)
+      setEditIdx(null)
+    } else {
+      setPlaces([...places, { id: uid(), ...form }])
+      setShowForm(false)
+    }
+  }
+ 
+  const deletePlace = idx => {
+    if (!window.confirm("Supprimer ce lieu ?")) return
+    setPlaces(places.filter((_, i) => i !== idx))
+  }
+ 
+  const SECTIONS = [
+    { key: "transport", icon: "✈️", label: "Transport", fields: [
+      { k: "vol",       label: "N° vol / train",  placeholder: "AF1234" },
+      { k: "aeroport",  label: "Aéroport / gare", placeholder: "CDG Terminal 2E" },
+      { k: "depart",    label: "Heure départ",     placeholder: "08h30" },
+      { k: "arrivee",   label: "Heure arrivée",    placeholder: "14h15" },
+      { k: "compagnie", label: "Compagnie",        placeholder: "Air France" },
+    ]},
+    { key: "urgences", icon: "🆘", label: "Urgences & Ambassade", fields: [
+      { k: "urgence",   label: "N° urgences local", placeholder: "112 / 911" },
+      { k: "ambassade", label: "Ambassade",          placeholder: "+33 1 44 05 31 00" },
+      { k: "assurance", label: "N° assurance",       placeholder: "0800 123 456" },
+      { k: "hopital",   label: "Hôpital proche",     placeholder: "Hôpital Central" },
+    ]},
+    { key: "divers", icon: "📝", label: "Notes libres", fields: [
+      { k: "notes", label: "Notes", placeholder: "Infos pratiques, conseils…" },
+    ]},
+  ]
+ 
+  return (
+    <div className="fade-up">
+ 
+      {/* ── Toggle Devises ── */}
+      <Card style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: C.text }}>Onglet Devises</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Utile si la devise locale est différente</div>
+          </div>
+          <button onClick={() => setWithDevises(v => !v)}
+            style={{ width: 44, height: 24, borderRadius: 12, background: withDevises ? C.accent : C.border, border: "none", cursor: "pointer", transition: "background .2s", position: "relative", flexShrink: 0 }}>
+            <span style={{ position: "absolute", top: 3, left: withDevises ? 22 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}/>
+          </button>
+        </div>
+      </Card>
+ 
+      {/* ── Carte ── */}
+      {places.some(p => p.lat) && <InfoMap places={places}/>}
+ 
+      {/* ── Liste des adresses ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>📍 Adresses & lieux</div>
+        {!showForm && editIdx === null && (
+          <Btn variant="accent" small onClick={() => setShowForm(true)}>
+            <Icon name="PlusCircle" size={14} color={C.accent}/> Ajouter
+          </Btn>
+        )}
+      </div>
+ 
+      {/* Formulaire d'ajout */}
+      {showForm && editIdx === null && (
+        <PlaceForm onSave={savePlace} onCancel={() => setShowForm(false)}/>
+      )}
+ 
+      {/* Cards des lieux */}
+      {places.length === 0 && !showForm && (
+        <div style={{ textAlign: "center", padding: "28px 20px", color: C.muted, background: "white", borderRadius: 14, border: `1px solid ${C.border}`, marginBottom: 14 }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📍</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Aucun lieu enregistré</div>
+          <div style={{ fontSize: 13 }}>Ajoute ton hôtel, restaurants, sites à visiter…</div>
+        </div>
+      )}
+ 
+      {places.map((place, idx) => (
+        editIdx === idx
+          ? <PlaceForm key={place.id || idx} initial={place} onSave={savePlace} onCancel={() => setEditIdx(null)}/>
+          : <PlaceCard key={place.id || idx} place={place} onEdit={() => setEditIdx(idx)} onDelete={() => deletePlace(idx)}/>
+      ))}
+ 
+      {/* ── Sections dépliables ── */}
+      <div style={{ marginTop: 6 }}>
+        {SECTIONS.map(sec => (
+          <div key={sec.key} style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 10, overflow: "hidden", boxShadow: C.shadow }}>
+            <button
+              onClick={() => setOpenSection(openSection === sec.key ? null : sec.key)}
+              style={{ width: "100%", background: "none", border: "none", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", fontFamily: "inherit" }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{sec.icon} {sec.label}</span>
+              <span style={{ color: C.muted, fontSize: 18, transition: "transform .2s", transform: openSection === sec.key ? "rotate(180deg)" : "rotate(0deg)" }}>⌄</span>
+            </button>
+            {openSection === sec.key && (
+              <div style={{ padding: "0 16px 16px", borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {sec.fields.map(f => (
+                    <div key={f.k} style={{ gridColumn: f.k === "notes" ? "1/-1" : "auto" }}>
+                      <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>{f.label}</div>
+                      {f.k === "notes"
+                        ? <textarea
+                            value={info[sec.key]?.[f.k] || ""}
+                            onChange={e => upd(sec.key, { ...info[sec.key], [f.k]: e.target.value })}
+                            placeholder={f.placeholder}
+                            style={{ background: "white", border: `1.5px solid ${C.border}`, borderRadius: 10, color: C.text, padding: "10px 14px", fontSize: 13, outline: "none", fontFamily: "inherit", width: "100%", minHeight: 80, resize: "vertical" }}/>
+                        : <Input
+                            value={info[sec.key]?.[f.k] || ""}
+                            onChange={e => upd(sec.key, { ...info[sec.key], [f.k]: e.target.value })}
+                            placeholder={f.placeholder}/>
+                      }
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+ 
+    </div>
+  )
+}
 /* ── Tab Convertisseur ── */
 export function TabConvertisseur({ currency }) {
   const [amount,setAmount] = useState("100")
