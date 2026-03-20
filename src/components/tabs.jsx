@@ -424,43 +424,49 @@ async function geocode(query) {
  
 /* ── Carte Leaflet ── */
 function InfoMap({ places }) {
-  const mapRef    = useRef(null)
-  const mapObj    = useRef(null)
+  const mapRef     = useRef(null)
+  const mapObj     = useRef(null)
   const markersRef = useRef([])
- 
+
   useEffect(() => {
-    // Charger Leaflet CSS dynamiquement
-    if (!document.getElementById("leaflet-css")) {
-      const link = document.createElement("link")
-      link.id   = "leaflet-css"
-      link.rel  = "stylesheet"
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      document.head.appendChild(link)
-    }
-    // Charger Leaflet JS
-    const load = () => {
-      if (!mapRef.current || mapObj.current) return
+    if (!mapRef.current || mapObj.current) return
+
+    const init = () => {
       const L = window.L
-      if (!L) return
-      mapObj.current = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
+      if (!L || !mapRef.current) return
+      mapObj.current = L.map(mapRef.current, {
+        zoomControl: true,
+        scrollWheelZoom: false
+      })
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors", maxZoom: 19
+        attribution: "© OpenStreetMap contributors",
+        maxZoom: 19
       }).addTo(mapObj.current)
+      setTimeout(() => mapObj.current?.invalidateSize(), 100)
     }
-    if (window.L) { load() }
-    else {
-      const script = document.createElement("script")
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      script.onload = load
-      document.head.appendChild(script)
+
+    if (window.L) {
+      init()
+    } else {
+      const existing = document.querySelector('script[src*="leaflet"]')
+      if (existing) {
+        existing.addEventListener('load', init)
+      } else {
+        const s = document.createElement('script')
+        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+        s.onload = init
+        document.head.appendChild(s)
+      }
     }
-    return () => { if (mapObj.current) { mapObj.current.remove(); mapObj.current = null } }
+
+    return () => {
+      if (mapObj.current) { mapObj.current.remove(); mapObj.current = null }
+    }
   }, [])
- 
+
   useEffect(() => {
     const L = window.L
     if (!L || !mapObj.current) return
-    // Nettoyer anciens marqueurs
     markersRef.current.forEach(m => m.remove())
     markersRef.current = []
     const valid = places.filter(p => p.lat && p.lng)
@@ -469,33 +475,28 @@ function InfoMap({ places }) {
       const cat = PLACE_CATS.find(c => c.id === p.category) || PLACE_CATS[6]
       const icon = L.divIcon({
         className: "",
-        html: `<div style="
-          background:${cat.color};color:white;border-radius:50%;
-          width:32px;height:32px;display:flex;align-items:center;
-          justify-content:center;font-size:15px;
-          box-shadow:0 2px 8px rgba(0,0,0,0.25);
-          border:2px solid white;">${cat.icon}</div>`,
+        html: `<div style="background:${cat.color};color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:2px solid white;">${cat.icon}</div>`,
         iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -18]
       })
       const marker = L.marker([p.lat, p.lng], { icon })
-        .bindPopup(`
-          <div style="font-family:'DM Sans',sans-serif;min-width:160px">
-            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${p.name}</div>
-            ${p.address ? `<div style="font-size:12px;color:#64748b;margin-bottom:4px">${p.address}</div>` : ""}
-            ${p.note    ? `<div style="font-size:12px;color:#475569;font-style:italic">${p.note}</div>` : ""}
-          </div>`)
+        .bindPopup(`<div style="font-family:'DM Sans',sans-serif;min-width:160px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">${p.name}</div>
+          ${p.address ? `<div style="font-size:12px;color:#64748b;margin-bottom:4px">${p.address}</div>` : ""}
+          ${p.note    ? `<div style="font-size:12px;color:#475569;font-style:italic">${p.note}</div>` : ""}
+        </div>`)
         .addTo(mapObj.current)
       markersRef.current.push(marker)
     })
-    // Centrer sur les marqueurs
     if (valid.length === 1) {
       mapObj.current.setView([valid[0].lat, valid[0].lng], 14)
     } else {
       const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]))
       mapObj.current.fitBounds(bounds, { padding: [40, 40] })
     }
+    // Re-invalider après le positionnement des marqueurs aussi
+    setTimeout(() => mapObj.current?.invalidateSize(), 50)
   }, [places])
- 
+
   return (
     <div ref={mapRef} style={{
       height: 280, borderRadius: 14, overflow: "hidden",
