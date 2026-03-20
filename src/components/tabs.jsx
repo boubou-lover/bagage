@@ -103,13 +103,29 @@ export function TabSynthese({ days, expenses, destination, currency }) {
   const total = expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0)
   return (
     <div className="fade-up">
-      <div style={{background:`linear-gradient(135deg,${C.accent},${C.sky})`,borderRadius:20,padding:"32px 24px",marginBottom:12,boxShadow:"0 8px 32px rgba(37,99,235,0.25)",textAlign:"center",color:"white"}}>
-        <div style={{fontSize:44,marginBottom:8}}>✈️</div>
-        <div style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(20px,5vw,32px)",marginBottom:6}}>{destination||"Mon Voyage"}</div>
-        {days[0]?.date&&<div style={{opacity:0.85,fontSize:14}}>{new Date(days[0].date+"T00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"})}{days.length>1&&days[days.length-1]?.date&&<> → {new Date(days[days.length-1].date+"T00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</>}</div>}
-        <div style={{display:"flex",justifyContent:"center",gap:32,marginTop:24,flexWrap:"wrap"}}>
-          {[{v:days.length,l:"jours",i:"📅"},{v:days.reduce((s,d)=>s+(d.events||[]).length,0),l:"activités",i:"🎯"},{v:fmt(total,sym),l:"dépensés",i:"💰"}].map(s=>(
-            <div key={s.l} style={{textAlign:"center"}}><div style={{fontSize:26,fontWeight:800}}>{s.v}</div><div style={{fontSize:12,opacity:0.8}}>{s.i} {s.l}</div></div>
+      <div style={{background:`linear-gradient(135deg,${C.accent},${C.sky})`,borderRadius:20,padding:"20px 24px",marginBottom:12,boxShadow:"0 4px 20px rgba(37,99,235,0.2)",color:"white"}}>
+        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
+          <div style={{fontSize:36}}>✈️</div>
+          <div>
+            <div style={{fontFamily:"'DM Serif Display',serif",fontSize:"clamp(18px,4vw,26px)",fontWeight:400,lineHeight:1.2}}>{destination||"Mon Voyage"}</div>
+            {days[0]?.date&&(
+              <div style={{opacity:0.85,fontSize:13,marginTop:3}}>
+                {new Date(days[0].date+"T00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"})}
+                {days.length>1&&days[days.length-1]?.date&&<> → {new Date(days[days.length-1].date+"T00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</>}
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          {[
+            {v:days.length, l:"jours", i:"📅"},
+            {v:days.reduce((s,d)=>s+(d.events||[]).length,0), l:"activités", i:"🎯"},
+            {v:fmt(total,sym), l:"dépensés", i:"💰"},
+          ].map(s=>(
+            <div key={s.l} style={{flex:1,background:"rgba(255,255,255,0.15)",borderRadius:12,padding:"10px 12px",textAlign:"center"}}>
+              <div style={{fontSize:20,fontWeight:800,lineHeight:1}}>{s.v}</div>
+              <div style={{fontSize:11,opacity:0.85,marginTop:4}}>{s.i} {s.l}</div>
+            </div>
           ))}
         </div>
       </div>
