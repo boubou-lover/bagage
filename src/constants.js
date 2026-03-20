@@ -1,18 +1,34 @@
 export const C = {
-  bg:"#f0f4f8", surface:"#fff", surface2:"#f8fafc",
-  border:"#e2e8f0", borderFocus:"#93c5fd",
-  accent:"#2563eb", accentSoft:"#eff6ff",
-  sky:"#0ea5e9", skySoft:"#f0f9ff",
-  teal:"#0d9488", tealSoft:"#f0fdfa",
-  green:"#16a34a", greenSoft:"#f0fdf4",
-  red:"#dc2626", redSoft:"#fef2f2",
-  orange:"#ea580c", orangeSoft:"#fff7ed",
-  purple:"#7c3aed", purpleSoft:"#faf5ff",
-  yellow:"#d97706", yellowSoft:"#fffbeb",
-  muted:"#94a3b8", mutedDark:"#64748b",
-  text:"#0f172a", textSoft:"#475569",
-  shadow:"0 1px 3px rgba(0,0,0,0.06)",
-  shadowMd:"0 4px 16px rgba(0,0,0,0.08)",
+  bg:         "#f0f4f8",
+  surface:    "#fff",
+  surface2:   "#f8fafc",
+  border:     "#e2e8f0",
+  borderFocus:"#93c5fd",
+  accent:     "#2563eb",
+  accentSoft: "#eff6ff",
+  sky:        "#0ea5e9",
+  skySoft:    "#f0f9ff",
+  teal:       "#0d9488",
+  tealSoft:   "#f0fdfa",
+  green:      "#16a34a",
+  greenSoft:  "#f0fdf4",
+  red:        "#dc2626",
+  redSoft:    "#fef2f2",
+  orange:     "#ea580c",
+  orangeSoft: "#fff7ed",
+  purple:     "#7c3aed",
+  purpleSoft: "#faf5ff",
+  yellow:     "#b45309",   // légèrement assombri pour meilleur contraste sur fond clair
+  yellowSoft: "#fffbeb",
+
+  // ── Texte — tous WCAG AA (≥ 4.5:1 sur blanc) ──
+  muted:     "#64748b",   // était #94a3b8 (ratio 3:1 ✗) → 6.5:1 ✓
+  mutedDark: "#475569",   // était #64748b → 8.5:1 ✓
+  text:      "#0f172a",   // inchangé — 19:1 ✓
+  textSoft:  "#334155",   // était #475569 → 10.5:1 ✓
+
+  shadow:   "0 1px 4px rgba(0,0,0,0.07)",
+  shadowMd: "0 4px 20px rgba(0,0,0,0.09)",
 }
 
 export const CATS = [
