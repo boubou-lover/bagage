@@ -288,6 +288,7 @@ export function TabBudget({ expenses, setExpenses, budget, setBudget, currency, 
 /* ── Tab Bagages ── */
 export function TabBagages({ checked, setChecked, customItems = {}, setCustomItems }) {
   const [newItem, setNewItem] = useState({})
+  const [removedItems, setRemovedItems] = useState({}) // { "catId__itemText": true }
 
   const toggle = id => setChecked(p => ({ ...p, [id]: !p[id] }))
 
@@ -299,17 +300,23 @@ export function TabBagages({ checked, setChecked, customItems = {}, setCustomIte
     setNewItem(p => ({ ...p, [catId]: "" }))
   }
 
-  const removeItem = (catId, id) => {
-    setCustomItems(p => ({ ...p, [catId]: (p[catId] || []).filter(i => i.id !== id) }))
-    setChecked(p => { const next = { ...p }; delete next[id]; return next })
+  const removeItem = (catId, item) => {
+    if (item.custom) {
+      setCustomItems(p => ({ ...p, [catId]: (p[catId] || []).filter(i => i.id !== item.id) }))
+    } else {
+      setRemovedItems(p => ({ ...p, [item.id]: true }))
+    }
+    setChecked(p => { const next = { ...p }; delete next[item.id]; return next })
   }
 
   const allItems = cat => [
-    ...cat.items.map(text => ({ id: `${cat.id}__${text}`, text, custom: false })),
+    ...cat.items
+      .map(text => ({ id: `${cat.id}__${text}`, text, custom: false }))
+      .filter(item => !removedItems[item.id]),
     ...(customItems[cat.id] || []).map(i => ({ ...i, custom: true })),
   ]
 
-  const total = PACK_ITEMS.reduce((s, c) => s + c.items.length + (customItems[c.id]?.length || 0), 0)
+  const total = PACK_ITEMS.reduce((s, c) => s + allItems(c).length, 0)
   const done  = Object.values(checked || {}).filter(Boolean).length
 
   return (
@@ -362,18 +369,18 @@ export function TabBagages({ checked, setChecked, customItems = {}, setCustomIte
                       {item.text}
                     </span>
                   </div>
-                  {item.custom && (
-                    <button onClick={()=>removeItem(cat.id, item.id)}
-                      style={{background:"none",border:"none",color:C.muted,cursor:"pointer",
-                        fontSize:18,padding:"4px 8px",borderRadius:6,flexShrink:0}}>
-                      ×
-                    </button>
-                  )}
+                  <button onClick={()=>removeItem(cat.id, item)}
+                    style={{background:"none",border:"none",color:C.muted,cursor:"pointer",
+                      fontSize:18,padding:"4px 8px",borderRadius:6,flexShrink:0,
+                      transition:"color .15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.color=C.red}
+                    onMouseLeave={e=>e.currentTarget.style.color=C.muted}>
+                    ×
+                  </button>
                 </div>
               )
             })}
 
-            {/* Champ d'ajout */}
             <div style={{display:"flex",gap:8,marginTop:12,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
               <Input
                 value={newItem[cat.id]||""}
