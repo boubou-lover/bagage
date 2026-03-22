@@ -1,4 +1,4 @@
-const CACHE = 'bagage-v14.303';
+const CACHE = 'bagage-v14.304';
 
 self.addEventListener('install', e => {
   e.waitUntil(
