@@ -601,10 +601,18 @@ function PlaceCard({ place, onEdit, onDelete }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 2 }}>{place.name}</div>
-        <div style={{ fontSize: 12, color: C.muted, marginBottom: place.note ? 4 : 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {place.address}
         </div>
-        {place.note && <div style={{ fontSize: 12, color: C.textSoft, fontStyle: "italic" }}>{place.note}</div>}
+        {place.address && (
+          <button
+            onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(place.address)}`, "_blank")}
+            style={{ fontSize: 11, color: C.accent, background: "none", border: "none", padding: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3, marginBottom: place.note ? 4 : 0, fontFamily: "inherit" }}
+          >
+            🗺️ Ouvrir dans Maps
+          </button>
+        )}
+        {place.note && <div style={{ fontSize: 12, color: C.textSoft, fontStyle: "italic", marginTop: 4 }}>{place.note}</div>}
         <div style={{ marginTop: 4 }}>
           <Tag color={cat.color} soft={cat.color + "18"}>{cat.icon} {cat.label}</Tag>
           {place.lat && <span style={{ fontSize: 11, color: C.green, marginLeft: 6 }}>📍 Sur la carte</span>}
