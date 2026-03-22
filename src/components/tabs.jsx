@@ -607,7 +607,7 @@ function PlaceCard({ place, onEdit, onDelete }) {
         {place.address && (
           <button
             onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(place.address)}`, "_blank")}
-            style={{ fontSize: 11, color: C.accent, background: "none", border: "none", padding: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3, marginBottom: place.note ? 4 : 0, fontFamily: "inherit" }}
+            style={{ fontSize: 11, color: C.accent, background: C.accentSoft, border: `1px solid #bfdbfe`, borderRadius: 6, padding: "3px 8px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3, marginBottom: place.note ? 4 : 0, fontFamily: "inherit", fontWeight: 600 }}
           >
             🗺️ Ouvrir dans Maps
           </button>
