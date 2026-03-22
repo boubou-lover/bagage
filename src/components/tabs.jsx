@@ -664,9 +664,14 @@ function TransportForm({ initial, onSave, onCancel }) {
         )}
       </div>
 
-      <div style={{ fontSize: 11, color: C.muted, marginBottom: 14, display: "flex", alignItems: "center", gap: 5, background: C.yellowSoft, border: "1px solid #fde68a", borderRadius: 8, padding: "6px 10px" }}>
-        <span>🧪</span>
-        <span><b style={{ color: C.yellow }}>Fonctionnalité expérimentale</b> — L'image est stockée localement et peut ne pas se synchroniser entre appareils.</span>
+      <div style={{ fontSize: 11, color: C.muted, marginBottom: 14, background: C.yellowSoft, border: "1px solid #fde68a", borderRadius: 8, padding: "8px 10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+          <span>🧪</span>
+          <b style={{ color: C.yellow }}>Fonctionnalité expérimentale</b>
+        </div>
+        <div style={{ lineHeight: 1.5 }}>
+          L'image est stockée dans Firebase et <b>visible par tous les membres du voyage</b>. Ne partage pas de documents contenant des <b>données bancaires, mots de passe ou informations sensibles</b>. Privilégie les QR codes et codes-barres de billets.
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
@@ -745,7 +750,9 @@ function TransportCard({ transport, onEdit, onDelete, onToggle, expanded }) {
                 style={{ maxWidth: "100%", borderRadius: 10, border: `1px solid ${C.border}`, display: "block", cursor: "pointer" }}
                 onClick={() => window.open(transport.ticketImage, "_blank")}
               />
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>🧪 Expérimental · Cliquer pour agrandir</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 6, padding: "6px 8px", background: C.yellowSoft, borderRadius: 6, border: "1px solid #fde68a", lineHeight: 1.5 }}>
+                🧪 Expérimental · Cliquer pour agrandir · <b style={{ color: C.yellow }}>Visible par tous les membres</b> — ne pas partager de données sensibles
+              </div>
             </div>
           )}
           <div style={{ display: "flex", gap: 8 }}>
