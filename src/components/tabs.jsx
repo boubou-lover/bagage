@@ -583,45 +583,76 @@ function PlaceForm({ initial, onSave, onCancel }) {
   )
 }
  
-/* ── Carte d'une adresse ── */
-function PlaceCard({ place, onEdit, onDelete }) {
+/* ── Carte compacte d'une adresse (liste) ── */
+function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
   const cat = PLACE_CATS.find(c => c.id === place.category) || PLACE_CATS[6]
   return (
     <div style={{
-      background: "white", border: `1px solid ${C.border}`, borderRadius: 12,
-      padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "flex-start", gap: 12,
-      boxShadow: C.shadow
+      background: "white", border: `1.5px solid ${expanded ? cat.color + "60" : C.border}`,
+      borderRadius: 14, marginBottom: 8, overflow: "hidden",
+      boxShadow: expanded ? `0 4px 16px ${cat.color}18` : C.shadow,
+      transition: "border-color .2s, box-shadow .2s"
     }}>
-      <div style={{
-        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-        background: cat.color + "18", border: `1px solid ${cat.color}30`,
-        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18
+      {/* En-tête cliquable */}
+      <div onClick={onToggle} style={{
+        display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+        cursor: "pointer", background: expanded ? cat.color + "08" : "white",
+        transition: "background .2s"
       }}>
-        {cat.icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 2 }}>{place.name}</div>
-        <div style={{ fontSize: 12, color: C.muted, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {place.address}
+        <div style={{
+          width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+          background: cat.color + "18", border: `1.5px solid ${cat.color}30`,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19
+        }}>
+          {cat.icon}
         </div>
-        {place.address && (
-          <button
-            onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(place.address)}`, "_blank")}
-            style={{ fontSize: 11, color: C.accent, background: C.accentSoft, border: `1px solid #bfdbfe`, borderRadius: 6, padding: "3px 8px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3, marginBottom: place.note ? 4 : 0, fontFamily: "inherit", fontWeight: 600 }}
-          >
-            🗺️ Ouvrir dans Maps
-          </button>
-        )}
-        {place.note && <div style={{ fontSize: 12, color: C.textSoft, fontStyle: "italic", marginTop: 4 }}>{place.note}</div>}
-        <div style={{ marginTop: 4 }}>
-          <Tag color={cat.color} soft={cat.color + "18"}>{cat.icon} {cat.label}</Tag>
-          {place.lat && <span style={{ fontSize: 11, color: C.green, marginLeft: 6 }}>📍 Sur la carte</span>}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 1 }}>{place.name}</div>
+          <div style={{ fontSize: 12, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <Tag color={cat.color} soft={cat.color + "14"}>{cat.label}</Tag>
+            {place.lat && <span style={{ fontSize: 11, color: C.green }}>📍</span>}
+            {place.address && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{place.address}</span>}
+          </div>
         </div>
+        <span style={{
+          color: C.muted, fontSize: 16, transition: "transform .25s",
+          transform: expanded ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0
+        }}>⌄</span>
       </div>
-      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-        <button onClick={onEdit} style={{ background: C.accentSoft, border: `1px solid #bfdbfe`, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 13 }}>✏️</button>
-        <button onClick={onDelete} style={{ background: C.redSoft, border: `1px solid #fecaca`, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 13 }}>🗑</button>
-      </div>
+
+      {/* Détail déplié */}
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${cat.color}20`, padding: "14px 16px", background: cat.color + "04" }}>
+          {place.address && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Adresse</div>
+              <div style={{ fontSize: 13, color: C.textSoft }}>{place.address}</div>
+            </div>
+          )}
+          {place.note && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Note</div>
+              <div style={{ fontSize: 13, color: C.textSoft, fontStyle: "italic" }}>{place.note}</div>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {place.address && (
+              <button
+                onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(place.address)}`, "_blank")}
+                style={{ fontSize: 12, color: C.accent, background: C.accentSoft, border: `1px solid #bfdbfe`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "inherit", fontWeight: 600 }}
+              >
+                🗺️ Ouvrir dans Maps
+              </button>
+            )}
+            <button onClick={onEdit} style={{ fontSize: 12, color: C.textSoft, background: "white", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
+              ✏️ Modifier
+            </button>
+            <button onClick={onDelete} style={{ fontSize: 12, color: C.red, background: C.redSoft, border: `1px solid #fecaca`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
+              🗑 Supprimer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -629,15 +660,15 @@ function PlaceCard({ place, onEdit, onDelete }) {
 /* ── Tab Info principal ── */
 export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }) {
   const upd = (k, v) => setInfo(p => ({ ...p, [k]: v }))
- 
-  // places = liste d'adresses/lieux, stockée dans info.places
+
   const places    = info.places || []
   const setPlaces = newPlaces => setInfo(p => ({ ...p, places: newPlaces }))
- 
-  const [showForm, setShowForm]   = useState(false)
-  const [editIdx,  setEditIdx]    = useState(null)   // index en cours d'édition
-  const [openSection, setOpenSection] = useState(null) // section dépliée
- 
+
+  const [showForm, setShowForm]       = useState(false)
+  const [editIdx,  setEditIdx]        = useState(null)
+  const [expandedId, setExpandedId]   = useState(null)
+  const [openSection, setOpenSection] = useState(null)
+
   const savePlace = form => {
     if (editIdx !== null) {
       const next = [...places]; next[editIdx] = { ...next[editIdx], ...form }
@@ -648,12 +679,14 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
       setShowForm(false)
     }
   }
- 
+
   const deletePlace = idx => {
     if (!window.confirm("Supprimer ce lieu ?")) return
+    const place = places[idx]
+    if (expandedId === (place.id || idx)) setExpandedId(null)
     setPlaces(places.filter((_, i) => i !== idx))
   }
- 
+
   const SECTIONS = [
     { key: "transport", icon: "✈️", label: "Transport", fields: [
       { k: "vol",       label: "N° vol / train",  placeholder: "AF1234" },
@@ -672,10 +705,10 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
       { k: "notes", label: "Notes", placeholder: "Infos pratiques, conseils…" },
     ]},
   ]
- 
+
   return (
-    <div className="fade-up">
- 
+    <div className="fade-up" style={{ paddingBottom: 80 }}>
+
       {/* ── Toggle Devises ── */}
       <Card style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -689,40 +722,46 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
           </button>
         </div>
       </Card>
- 
-      {/* ── Carte ── */}
+
+      {/* ── Carte Leaflet ── */}
       {places.some(p => p.lat) && <InfoMap places={places}/>}
- 
-      {/* ── Liste des adresses ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>📍 Adresses & lieux</div>
-        {!showForm && editIdx === null && (
-          <Btn variant="accent" small onClick={() => setShowForm(true)}>
-            <Icon name="PlusCircle" size={14} color={C.accent}/> Ajouter
-          </Btn>
-        )}
-      </div>
- 
-      {/* Formulaire d'ajout */}
+
+      {/* ── Liste des lieux (accordéon) ── */}
+      {places.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+            📍 {places.length} lieu{places.length > 1 ? "x" : ""} enregistré{places.length > 1 ? "s" : ""}
+          </div>
+          {places.map((place, idx) => {
+            const placeKey = place.id || idx
+            return editIdx === idx
+              ? <PlaceForm key={placeKey} initial={place} onSave={savePlace} onCancel={() => setEditIdx(null)}/>
+              : <PlaceCard
+                  key={placeKey}
+                  place={place}
+                  expanded={expandedId === placeKey}
+                  onToggle={() => setExpandedId(expandedId === placeKey ? null : placeKey)}
+                  onEdit={() => { setEditIdx(idx); setExpandedId(null) }}
+                  onDelete={() => deletePlace(idx)}
+                />
+          })}
+        </div>
+      )}
+
+      {/* Formulaire d'ajout (inline, au-dessus des sections) */}
       {showForm && editIdx === null && (
         <PlaceForm onSave={savePlace} onCancel={() => setShowForm(false)}/>
       )}
- 
-      {/* Cards des lieux */}
+
+      {/* Vide state */}
       {places.length === 0 && !showForm && (
-        <div style={{ textAlign: "center", padding: "28px 20px", color: C.muted, background: "white", borderRadius: 14, border: `1px solid ${C.border}`, marginBottom: 14 }}>
+        <div style={{ textAlign: "center", padding: "28px 20px", color: C.muted, background: "white", borderRadius: 14, border: `1.5px dashed ${C.border}`, marginBottom: 14 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>📍</div>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>Aucun lieu enregistré</div>
           <div style={{ fontSize: 13 }}>Ajoute ton hôtel, restaurants, sites à visiter…</div>
         </div>
       )}
- 
-      {places.map((place, idx) => (
-        editIdx === idx
-          ? <PlaceForm key={place.id || idx} initial={place} onSave={savePlace} onCancel={() => setEditIdx(null)}/>
-          : <PlaceCard key={place.id || idx} place={place} onEdit={() => setEditIdx(idx)} onDelete={() => deletePlace(idx)}/>
-      ))}
- 
+
       {/* ── Sections dépliables ── */}
       <div style={{ marginTop: 6 }}>
         {SECTIONS.map(sec => (
@@ -758,7 +797,28 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
           </div>
         ))}
       </div>
- 
+
+      {/* ── Bouton fixe "Ajouter un lieu" ── */}
+      {!showForm && editIdx === null && (
+        <div style={{
+          position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)",
+          zIndex: 200, width: "calc(100% - 32px)", maxWidth: 648
+        }}>
+          <button
+            onClick={() => { setShowForm(true); setExpandedId(null) }}
+            style={{
+              width: "100%", background: C.accent,
+              border: "none", borderRadius: 14, padding: "14px 20px",
+              fontSize: 15, fontWeight: 700, color: "white", cursor: "pointer",
+              fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              boxShadow: "0 4px 20px rgba(37,99,235,0.35)"
+            }}
+          >
+            <Icon name="PlusCircle" size={18} color="white"/> Ajouter un lieu
+          </button>
+        </div>
+      )}
+
     </div>
   )
 }
