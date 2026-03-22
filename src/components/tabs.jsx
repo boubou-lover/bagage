@@ -421,10 +421,17 @@ const PLACE_CATS = [
   { id: "hebergement", label: "Hébergement", icon: "🏨", color: "#0d9488" },
   { id: "restaurant",  label: "Restaurant",  icon: "🍽️", color: "#ea580c" },
   { id: "musee",       label: "Musée / Site", icon: "🏛️", color: "#7c3aed" },
-  { id: "transport",   label: "Transport",   icon: "🚉", color: "#0ea5e9" },
   { id: "shopping",    label: "Shopping",    icon: "🛍️", color: "#dc2626" },
   { id: "contact",     label: "Contact",     icon: "👤", color: "#2563eb" },
   { id: "autre",       label: "Autre",       icon: "📍", color: "#64748b" },
+  ]
+const TRANSPORT_TYPES = [
+  { id: "avion",   label: "Avion",    icon: "✈️" },
+  { id: "train",   label: "Train",    icon: "🚄" },
+  { id: "bus",     label: "Bus",      icon: "🚌" },
+  { id: "bateau",  label: "Bateau",   icon: "⛴️" },
+  { id: "voiture", label: "Voiture",  icon: "🚗" },
+  { id: "autre",   label: "Autre",    icon: "🚀" },
 ]
  
 /* Géocode une adresse via Nominatim (OSM) */
@@ -582,6 +589,135 @@ function PlaceForm({ initial, onSave, onCancel }) {
     </div>
   )
 }
+function TransportForm({ initial, onSave, onCancel }) {
+  const [form, setForm] = useState(initial || {
+    type: "avion", numero: "", compagnie: "", depart: "", arrivee: "",
+    heureDepart: "", heureArrivee: "", terminal: "", note: ""
+  })
+  const t = TRANSPORT_TYPES.find(t => t.id === form.type) || TRANSPORT_TYPES[0]
+  const isValid = form.depart.trim() && form.arrivee.trim()
+
+  return (
+    <div style={{ background: C.surface2, border: `1.5px solid #0ea5e930`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <span style={{ fontSize: 22 }}>{t.icon}</span>
+        <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>Nouveau transport</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Type</div>
+          <Sel value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={{ width: "100%" }}>
+            {TRANSPORT_TYPES.map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
+          </Sel>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>N° vol / train</div>
+          <Input value={form.numero} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} placeholder="AF1234"/>
+        </div>
+        <div style={{ gridColumn: "1/-1" }}>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Compagnie</div>
+          <Input value={form.compagnie} onChange={e => setForm(f => ({ ...f, compagnie: e.target.value }))} placeholder="Air France, SNCF…"/>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Départ *</div>
+          <Input value={form.depart} onChange={e => setForm(f => ({ ...f, depart: e.target.value }))} placeholder="Paris CDG"/>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Arrivée *</div>
+          <Input value={form.arrivee} onChange={e => setForm(f => ({ ...f, arrivee: e.target.value }))} placeholder="Tokyo HND"/>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Heure départ</div>
+          <Input type="time" value={form.heureDepart} onChange={e => setForm(f => ({ ...f, heureDepart: e.target.value }))}/>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Heure arrivée</div>
+          <Input type="time" value={form.heureArrivee} onChange={e => setForm(f => ({ ...f, heureArrivee: e.target.value }))}/>
+        </div>
+        <div style={{ gridColumn: "1/-1" }}>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Terminal / Quai / Gate</div>
+          <Input value={form.terminal} onChange={e => setForm(f => ({ ...f, terminal: e.target.value }))} placeholder="Terminal 2E, Quai 4…"/>
+        </div>
+        <div style={{ gridColumn: "1/-1" }}>
+          <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Note</div>
+          <Input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Bagage en soute, check-in en ligne…"/>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn onClick={() => onSave({ ...form, _isTransport: true })} disabled={!isValid}>Enregistrer</Btn>
+        <Btn variant="ghost" onClick={onCancel}>Annuler</Btn>
+      </div>
+    </div>
+  )
+}
+function TransportCard({ transport, onEdit, onDelete, onToggle, expanded }) {
+  const t = TRANSPORT_TYPES.find(t => t.id === transport.type) || TRANSPORT_TYPES[0]
+  const color = "#0ea5e9"
+  return (
+    <div style={{
+      background: "white", border: `1.5px solid ${expanded ? color + "60" : C.border}`,
+      borderRadius: 14, marginBottom: 8, overflow: "hidden",
+      boxShadow: expanded ? `0 4px 16px ${color}18` : C.shadow,
+      transition: "border-color .2s, box-shadow .2s"
+    }}>
+      <div onClick={onToggle} style={{
+        display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+        cursor: "pointer", background: expanded ? color + "08" : "white", transition: "background .2s"
+      }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+          background: color + "18", border: `1.5px solid ${color}30`,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19
+        }}>
+          {t.icon}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 1 }}>
+            {transport.depart} → {transport.arrivee}
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <Tag color={color} soft={color + "14"}>{t.icon} {t.label}</Tag>
+            {transport.numero && <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{transport.numero}</span>}
+            {transport.heureDepart && <span>{transport.heureDepart}{transport.heureArrivee ? ` → ${transport.heureArrivee}` : ""}</span>}
+          </div>
+        </div>
+        <span style={{
+          color: C.muted, fontSize: 16, transition: "transform .25s",
+          transform: expanded ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0
+        }}>⌄</span>
+      </div>
+
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${color}20`, padding: "14px 16px", background: color + "04" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            {[
+              { label: "Départ", value: transport.depart + (transport.heureDepart ? ` à ${transport.heureDepart}` : "") },
+              { label: "Arrivée", value: transport.arrivee + (transport.heureArrivee ? ` à ${transport.heureArrivee}` : "") },
+              transport.compagnie && { label: "Compagnie", value: transport.compagnie },
+              transport.numero    && { label: "N° vol / train", value: transport.numero },
+              transport.terminal  && { label: "Terminal / Quai", value: transport.terminal },
+            ].filter(Boolean).map(({ label, value }) => (
+              <div key={label}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
+                <div style={{ fontSize: 13, color: C.textSoft, fontWeight: 500 }}>{value}</div>
+              </div>
+            ))}
+          </div>
+          {transport.note && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Note</div>
+              <div style={{ fontSize: 13, color: C.textSoft, fontStyle: "italic" }}>{transport.note}</div>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onEdit} style={{ fontSize: 12, color: C.textSoft, background: "white", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>✏️ Modifier</button>
+            <button onClick={onDelete} style={{ fontSize: 12, color: C.red, background: C.redSoft, border: `1px solid #fecaca`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>🗑 Supprimer</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
  
 /* ── Carte compacte d'une adresse (liste) ── */
 function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
@@ -661,40 +797,34 @@ function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
 export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }) {
   const upd = (k, v) => setInfo(p => ({ ...p, [k]: v }))
 
-  const places    = info.places || []
-  const setPlaces = newPlaces => setInfo(p => ({ ...p, places: newPlaces }))
+  const places     = (info.places || []).filter(p => !p._isTransport)
+  const transports = (info.places || []).filter(p => p._isTransport)
+  const setAll     = newAll => setInfo(p => ({ ...p, places: newAll }))
+  const allItems   = info.places || []
 
-  const [showForm, setShowForm]       = useState(false)
-  const [editIdx,  setEditIdx]        = useState(null)
-  const [expandedId, setExpandedId]   = useState(null)
+  const [showForm,    setShowForm]    = useState(null) // null | "lieu" | "transport"
+  const [editIdx,     setEditIdx]     = useState(null)
+  const [expandedId,  setExpandedId]  = useState(null)
   const [openSection, setOpenSection] = useState(null)
 
-  const savePlace = form => {
+  const saveItem = form => {
     if (editIdx !== null) {
-      const next = [...places]; next[editIdx] = { ...next[editIdx], ...form }
-      setPlaces(next)
-      setEditIdx(null)
+      const next = [...allItems]; next[editIdx] = { ...next[editIdx], ...form }
+      setAll(next); setEditIdx(null)
     } else {
-      setPlaces([...places, { id: uid(), ...form }])
-      setShowForm(false)
+      setAll([...allItems, { id: uid(), ...form }])
+      setShowForm(null)
     }
   }
 
-  const deletePlace = idx => {
-    if (!window.confirm("Supprimer ce lieu ?")) return
-    const place = places[idx]
-    if (expandedId === (place.id || idx)) setExpandedId(null)
-    setPlaces(places.filter((_, i) => i !== idx))
+  const deleteItem = idx => {
+    if (!window.confirm("Supprimer ?")) return
+    const item = allItems[idx]
+    if (expandedId === (item.id || idx)) setExpandedId(null)
+    setAll(allItems.filter((_, i) => i !== idx))
   }
 
   const SECTIONS = [
-    { key: "transport", icon: "✈️", label: "Transport", fields: [
-      { k: "vol",       label: "N° vol / train",  placeholder: "AF1234" },
-      { k: "aeroport",  label: "Aéroport / gare", placeholder: "CDG Terminal 2E" },
-      { k: "depart",    label: "Heure départ",     placeholder: "08h30" },
-      { k: "arrivee",   label: "Heure arrivée",    placeholder: "14h15" },
-      { k: "compagnie", label: "Compagnie",        placeholder: "Air France" },
-    ]},
     { key: "urgences", icon: "🆘", label: "Urgences & Ambassade", fields: [
       { k: "urgence",   label: "N° urgences local", placeholder: "112 / 911" },
       { k: "ambassade", label: "Ambassade",          placeholder: "+33 1 44 05 31 00" },
@@ -706,8 +836,28 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
     ]},
   ]
 
+  const renderItem = (item, realIdx) => {
+    const key = item.id || realIdx
+    if (editIdx === realIdx) {
+      return item._isTransport
+        ? <TransportForm key={key} initial={item} onSave={saveItem} onCancel={() => setEditIdx(null)}/>
+        : <PlaceForm     key={key} initial={item} onSave={saveItem} onCancel={() => setEditIdx(null)}/>
+    }
+    return item._isTransport
+      ? <TransportCard key={key} transport={item}
+          expanded={expandedId === key}
+          onToggle={() => setExpandedId(expandedId === key ? null : key)}
+          onEdit={() => { setEditIdx(realIdx); setExpandedId(null) }}
+          onDelete={() => deleteItem(realIdx)}/>
+      : <PlaceCard key={key} place={item}
+          expanded={expandedId === key}
+          onToggle={() => setExpandedId(expandedId === key ? null : key)}
+          onEdit={() => { setEditIdx(realIdx); setExpandedId(null) }}
+          onDelete={() => deleteItem(realIdx)}/>
+  }
+
   return (
-    <div className="fade-up" style={{ paddingBottom: 80 }}>
+    <div className="fade-up" style={{ paddingBottom: 160 }}>
 
       {/* ── Toggle Devises ── */}
       <Card style={{ marginBottom: 14 }}>
@@ -724,41 +874,38 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
       </Card>
 
       {/* ── Carte Leaflet ── */}
-      {places.some(p => p.lat) && <InfoMap places={places}/>}
+      {allItems.some(p => p.lat) && <InfoMap places={allItems.filter(p => p.lat)}/>}
 
-      {/* ── Liste des lieux (accordéon) ── */}
+      {/* ── Transports ── */}
+      {transports.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+            ✈️ {transports.length} transport{transports.length > 1 ? "s" : ""}
+          </div>
+          {allItems.map((item, idx) => item._isTransport ? renderItem(item, idx) : null)}
+        </div>
+      )}
+
+      {/* ── Lieux ── */}
       {places.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
             📍 {places.length} lieu{places.length > 1 ? "x" : ""} enregistré{places.length > 1 ? "s" : ""}
           </div>
-          {places.map((place, idx) => {
-            const placeKey = place.id || idx
-            return editIdx === idx
-              ? <PlaceForm key={placeKey} initial={place} onSave={savePlace} onCancel={() => setEditIdx(null)}/>
-              : <PlaceCard
-                  key={placeKey}
-                  place={place}
-                  expanded={expandedId === placeKey}
-                  onToggle={() => setExpandedId(expandedId === placeKey ? null : placeKey)}
-                  onEdit={() => { setEditIdx(idx); setExpandedId(null) }}
-                  onDelete={() => deletePlace(idx)}
-                />
-          })}
+          {allItems.map((item, idx) => !item._isTransport ? renderItem(item, idx) : null)}
         </div>
       )}
 
-      {/* Formulaire d'ajout (inline, au-dessus des sections) */}
-      {showForm && editIdx === null && (
-        <PlaceForm onSave={savePlace} onCancel={() => setShowForm(false)}/>
-      )}
+      {/* Formulaire actif */}
+      {showForm === "lieu"      && editIdx === null && <PlaceForm     onSave={saveItem} onCancel={() => setShowForm(null)}/>}
+      {showForm === "transport" && editIdx === null && <TransportForm onSave={saveItem} onCancel={() => setShowForm(null)}/>}
 
       {/* Vide state */}
-      {places.length === 0 && !showForm && (
+      {allItems.length === 0 && !showForm && (
         <div style={{ textAlign: "center", padding: "28px 20px", color: C.muted, background: "white", borderRadius: 14, border: `1.5px dashed ${C.border}`, marginBottom: 14 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>📍</div>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>Aucun lieu enregistré</div>
-          <div style={{ fontSize: 13 }}>Ajoute ton hôtel, restaurants, sites à visiter…</div>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🗺️</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Aucun lieu ni transport</div>
+          <div style={{ fontSize: 13 }}>Ajoute ton hôtel, un vol, un restaurant…</div>
         </div>
       )}
 
@@ -766,28 +913,21 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
       <div style={{ marginTop: 6 }}>
         {SECTIONS.map(sec => (
           <div key={sec.key} style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 10, overflow: "hidden", boxShadow: C.shadow }}>
-            <button
-              onClick={() => setOpenSection(openSection === sec.key ? null : sec.key)}
+            <button onClick={() => setOpenSection(openSection === sec.key ? null : sec.key)}
               style={{ width: "100%", background: "none", border: "none", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", fontFamily: "inherit" }}>
               <span style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{sec.icon} {sec.label}</span>
               <span style={{ color: C.muted, fontSize: 18, transition: "transform .2s", transform: openSection === sec.key ? "rotate(180deg)" : "rotate(0deg)" }}>⌄</span>
             </button>
             {openSection === sec.key && (
-              <div style={{ padding: "0 16px 16px", borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+              <div style={{ padding: "14px 16px 16px", borderTop: `1px solid ${C.border}` }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {sec.fields.map(f => (
                     <div key={f.k} style={{ gridColumn: f.k === "notes" ? "1/-1" : "auto" }}>
                       <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>{f.label}</div>
                       {f.k === "notes"
-                        ? <textarea
-                            value={info[sec.key]?.[f.k] || ""}
-                            onChange={e => upd(sec.key, { ...info[sec.key], [f.k]: e.target.value })}
-                            placeholder={f.placeholder}
+                        ? <textarea value={info[sec.key]?.[f.k] || ""} onChange={e => upd(sec.key, { ...info[sec.key], [f.k]: e.target.value })} placeholder={f.placeholder}
                             style={{ background: "white", border: `1.5px solid ${C.border}`, borderRadius: 10, color: C.text, padding: "10px 14px", fontSize: 13, outline: "none", fontFamily: "inherit", width: "100%", minHeight: 80, resize: "vertical" }}/>
-                        : <Input
-                            value={info[sec.key]?.[f.k] || ""}
-                            onChange={e => upd(sec.key, { ...info[sec.key], [f.k]: e.target.value })}
-                            placeholder={f.placeholder}/>
+                        : <Input value={info[sec.key]?.[f.k] || ""} onChange={e => upd(sec.key, { ...info[sec.key], [f.k]: e.target.value })} placeholder={f.placeholder}/>
                       }
                     </div>
                   ))}
@@ -798,30 +938,35 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
         ))}
       </div>
 
-      {/* ── Bouton fixe "Ajouter un lieu" ── */}
+      {/* ── Deux boutons fixes en bas ── */}
       {!showForm && editIdx === null && (
         <div style={{
-          position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)",
-          zIndex: 200, width: "calc(100% - 32px)", maxWidth: 648
+          position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
+          zIndex: 200, width: "calc(100% - 32px)", maxWidth: 648,
+          display: "flex", gap: 10
         }}>
-          <button
-            onClick={() => { setShowForm(true); setExpandedId(null) }}
-            style={{
-              width: "100%", background: C.accent,
-              border: "none", borderRadius: 14, padding: "14px 20px",
-              fontSize: 15, fontWeight: 700, color: "white", cursor: "pointer",
-              fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              boxShadow: "0 4px 20px rgba(37,99,235,0.35)"
-            }}
-          >
-            <Icon name="PlusCircle" size={18} color="white"/> Ajouter un lieu
+          <button onClick={() => setShowForm("transport")} style={{
+            flex: 1, background: "#0ea5e9", border: "none", borderRadius: 14, padding: "13px 16px",
+            fontSize: 14, fontWeight: 700, color: "white", cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+            boxShadow: "0 4px 20px rgba(14,165,233,0.4)"
+          }}>
+            ✈️ Transport
+          </button>
+          <button onClick={() => setShowForm("lieu")} style={{
+            flex: 1, background: C.accent, border: "none", borderRadius: 14, padding: "13px 16px",
+            fontSize: 14, fontWeight: 700, color: "white", cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+            boxShadow: "0 4px 20px rgba(37,99,235,0.35)"
+          }}>
+            📍 Lieu
           </button>
         </div>
       )}
-
     </div>
   )
 }
+
 /* ── Tab Convertisseur ── */
 export function TabConvertisseur({ currency }) {
   const [amount,setAmount] = useState("100")
