@@ -643,6 +643,32 @@ function TransportForm({ initial, onSave, onCancel }) {
           <Input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Bagage en soute, check-in en ligne…"/>
         </div>
       </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
+        <label style={{
+          flex: 1, display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+          background: C.surface2, border: `1.5px solid ${C.border}`, borderRadius: 10,
+          padding: "8px 12px", fontSize: 13, color: C.mutedDark
+        }}>
+          📸 {form.ticketImage ? "Ticket joint ✓" : "Joindre ticket / QR code"}
+          <input type="file" accept="image/*" onChange={e => {
+            const f = e.target.files?.[0]; if (!f) return
+            const r = new FileReader(); r.onload = ev => setForm(f => ({ ...f, ticketImage: ev.target.result })); r.readAsDataURL(f)
+          }} style={{ display: "none" }}/>
+        </label>
+        {form.ticketImage && (
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <img src={form.ticketImage} style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", border: `1px solid ${C.border}`, display: "block" }} alt="ticket"/>
+            <button onClick={() => setForm(f => ({ ...f, ticketImage: null }))}
+              style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: C.red, border: "none", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{ fontSize: 11, color: C.muted, marginBottom: 14, display: "flex", alignItems: "center", gap: 5, background: C.yellowSoft, border: "1px solid #fde68a", borderRadius: 8, padding: "6px 10px" }}>
+        <span>🧪</span>
+        <span><b style={{ color: C.yellow }}>Fonctionnalité expérimentale</b> — L'image est stockée localement et peut ne pas se synchroniser entre appareils.</span>
+      </div>
+
       <div style={{ display: "flex", gap: 8 }}>
         <Btn onClick={() => onSave({ ...form, _isTransport: true })} disabled={!isValid}>Enregistrer</Btn>
         <Btn variant="ghost" onClick={onCancel}>Annuler</Btn>
@@ -650,6 +676,7 @@ function TransportForm({ initial, onSave, onCancel }) {
     </div>
   )
 }
+ 
 function TransportCard({ transport, onEdit, onDelete, onToggle, expanded }) {
   const t = TRANSPORT_TYPES.find(t => t.id === transport.type) || TRANSPORT_TYPES[0]
   const color = "#0ea5e9"
@@ -707,6 +734,18 @@ function TransportCard({ transport, onEdit, onDelete, onToggle, expanded }) {
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Note</div>
               <div style={{ fontSize: 13, color: C.textSoft, fontStyle: "italic" }}>{transport.note}</div>
+            </div>
+          )}
+          {transport.ticketImage && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Ticket</div>
+              <img
+                src={transport.ticketImage}
+                alt="Ticket"
+                style={{ maxWidth: "100%", borderRadius: 10, border: `1px solid ${C.border}`, display: "block", cursor: "pointer" }}
+                onClick={() => window.open(transport.ticketImage, "_blank")}
+              />
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>🧪 Expérimental · Cliquer pour agrandir</div>
             </div>
           )}
           <div style={{ display: "flex", gap: 8 }}>
