@@ -24,14 +24,15 @@ export default function TripApp({ user, trip, onBack }) {
 
   const isRemote    = useRef(false)
   const initialized = useRef(false)
-  const saveRef     = useRef(debounce((path,data) => {
+  const saveRef     = useRef(debounce((path, data) => {
     setSyncing(true)
     fbUpdate(path, data)
     setTimeout(() => setSyncing(false), 1000)
   }, 1500))
 
+  // ── Listener Firebase — retourne bien l'unsubscribe ──
   useEffect(() => {
-    fbListen(`trips/${trip.id}`, data => {
+    const unsub = fbListen(`trips/${trip.id}`, data => {
       if (!data) return
       isRemote.current = true
       if (typeof data.destination==="string")                            setDestination(data.destination)
@@ -46,14 +47,19 @@ export default function TripApp({ user, trip, onBack }) {
       if (data.customItems&&typeof data.customItems==="object")         setCustomItems(data.customItems)
       if (data.removedItems&&typeof data.removedItems==="object")       setRemovedItems(data.removedItems)
       initialized.current = true
-      setTimeout(() => { isRemote.current = false }, 200)
     })
+    return unsub  // ← nettoyage correct du listener
   }, [trip.id])
 
+  // ── Sauvegarde — reset isRemote de façon déterministe ──
   useEffect(() => {
-    if (isRemote.current||!initialized.current) return
-    saveRef.current(`trips/${trip.id}`, {destination,days,expenses,budget,currency,checked,customItems,removedItems,withDevises,info})
-  }, [destination,days,expenses,budget,currency,checked,customItems,removedItems])
+    if (!initialized.current) return
+    if (isRemote.current) {
+      isRemote.current = false  // reset ici, pas dans un setTimeout
+      return
+    }
+    saveRef.current(`trips/${trip.id}`, { destination, days, expenses, budget, currency, checked, customItems, removedItems, withDevises, info })
+  }, [destination, days, expenses, budget, currency, checked, customItems, removedItems, withDevises, info])
 
   const memberCount = Object.keys(members).length
 
