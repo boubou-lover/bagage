@@ -433,7 +433,7 @@ const TRANSPORT_TYPES = [
   { id: "voiture", label: "Voiture",  icon: "🚗" },
   { id: "autre",   label: "Autre",    icon: "🚀" },
 ]
- 
+
 /* Géocode une adresse via Nominatim (OSM) */
 async function geocode(query) {
   const r = await fetch(
@@ -444,7 +444,7 @@ async function geocode(query) {
   if (!d.length) throw new Error("Adresse introuvable")
   return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), display: d[0].display_name }
 }
- 
+
 /* ── Carte Leaflet ── */
 function InfoMap({ places }) {
   const mapRef     = useRef(null)
@@ -516,7 +516,6 @@ function InfoMap({ places }) {
       const bounds = L.latLngBounds(valid.map(p => [p.lat, p.lng]))
       mapObj.current.fitBounds(bounds, { padding: [40, 40] })
     }
-    // Re-invalider après le positionnement des marqueurs aussi
     setTimeout(() => mapObj.current?.invalidateSize(), 50)
   }, [places])
 
@@ -528,13 +527,13 @@ function InfoMap({ places }) {
     }}/>
   )
 }
- 
+
 /* ── Formulaire d'ajout/édition d'une adresse ── */
 function PlaceForm({ initial, onSave, onCancel }) {
-  const [form, setForm]       = useState(initial || { name: "", address: "", category: "hebergement", note: "" })
+  const [form, setForm]           = useState(initial || { name: "", address: "", category: "hebergement", note: "", tel: "" })
   const [geocoding, setGeocoding] = useState(false)
-  const [geoErr, setGeoErr]   = useState("")
- 
+  const [geoErr, setGeoErr]       = useState("")
+
   const handleGeocode = async () => {
     if (!form.address.trim()) return
     setGeocoding(true); setGeoErr("")
@@ -544,9 +543,9 @@ function PlaceForm({ initial, onSave, onCancel }) {
     } catch { setGeoErr("Adresse introuvable — vérifie et réessaie") }
     setGeocoding(false)
   }
- 
+
   const isValid = form.name.trim() && form.address.trim()
- 
+
   return (
     <div style={{ background: C.surface2, border: `1.5px solid ${C.borderFocus}`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
@@ -564,6 +563,18 @@ function PlaceForm({ initial, onSave, onCancel }) {
           <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Note</div>
           <Input value={form.note || ""} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Chambre 204, code #1234…"/>
         </div>
+        {/* ── Téléphone (hébergement, restaurant, contact) ── */}
+        {["hebergement", "restaurant", "contact"].includes(form.category) && (
+          <div style={{ gridColumn: "1/-1" }}>
+            <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Téléphone</div>
+            <Input
+              type="tel"
+              value={form.tel || ""}
+              onChange={e => setForm(f => ({ ...f, tel: e.target.value }))}
+              placeholder="+81 3 1234 5678"
+            />
+          </div>
+        )}
         <div style={{ gridColumn: "1/-1" }}>
           <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Adresse *</div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -589,6 +600,7 @@ function PlaceForm({ initial, onSave, onCancel }) {
     </div>
   )
 }
+
 function TransportForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial || {
     type: "avion", numero: "", compagnie: "", depart: "", arrivee: "",
@@ -681,7 +693,7 @@ function TransportForm({ initial, onSave, onCancel }) {
     </div>
   )
 }
- 
+
 function TransportCard({ transport, onEdit, onDelete, onToggle, expanded }) {
   const t = TRANSPORT_TYPES.find(t => t.id === transport.type) || TRANSPORT_TYPES[0]
   const color = "#0ea5e9"
@@ -764,7 +776,7 @@ function TransportCard({ transport, onEdit, onDelete, onToggle, expanded }) {
     </div>
   )
 }
- 
+
 /* ── Carte compacte d'une adresse (liste) ── */
 function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
   const cat = PLACE_CATS.find(c => c.id === place.category) || PLACE_CATS[6]
@@ -817,6 +829,16 @@ function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
               <div style={{ fontSize: 13, color: C.textSoft, fontStyle: "italic" }}>{place.note}</div>
             </div>
           )}
+          {/* ── Téléphone cliquable ── */}
+          {place.tel && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Téléphone</div>
+              <a href={`tel:${place.tel}`}
+                style={{ fontSize: 13, color: C.teal, fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                📞 {place.tel}
+              </a>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {place.address && (
               <button
@@ -838,7 +860,7 @@ function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
     </div>
   )
 }
- 
+
 /* ── Tab Info principal ── */
 export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }) {
   const upd = (k, v) => setInfo(p => ({ ...p, [k]: v }))
@@ -848,7 +870,7 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
   const setAll     = newAll => setInfo(p => ({ ...p, places: newAll }))
   const allItems   = info.places || []
 
-  const [showForm,    setShowForm]    = useState(null) // null | "lieu" | "transport"
+  const [showForm,    setShowForm]    = useState(null)
   const [editIdx,     setEditIdx]     = useState(null)
   const [expandedId,  setExpandedId]  = useState(null)
   const [openSection, setOpenSection] = useState(null)
