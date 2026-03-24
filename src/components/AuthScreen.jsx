@@ -41,14 +41,15 @@ export default function AuthScreen({ onAuth, prefillEmail="" }) {
   }
 
   const handleGoogle = async () => {
-    setLoading(true); setError("")
-    try {
-      const cred = await signInGoogle()
-      fbSet(`users/${cred.user.uid}`, {email:cred.user.email, name:cred.user.displayName||cred.user.email, photo:cred.user.photoURL||""})
-      onAuth(cred.user)
-    } catch(e) { setError(errMsg(e.code)) }
+  setLoading(true); setError("")
+  try {
+    await signInGoogle()
+    // La page va se recharger, le résultat est capturé dans App.jsx
+  } catch(e) {
+    setError(errMsg(e.code))
     setLoading(false)
   }
+}
 
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${C.accent} 0%,${C.sky} 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
