@@ -40,13 +40,13 @@ export default function AuthScreen({ onAuth, prefillEmail="" }) {
     setLoading(false)
   }
 
-  const handleGoogle = async () => {
+ const handleGoogle = async () => {
   setLoading(true); setError("")
   try {
-    await signInGoogle()
-    // La page va se recharger, le résultat est capturé dans App.jsx
+    const result = await signInGoogle()
+    onAuth(result.user)
   } catch(e) {
-    setError(errMsg(e.code))
+    if (e.code !== 'auth/popup-closed-by-user') setError(errMsg(e.code))
     setLoading(false)
   }
 }
