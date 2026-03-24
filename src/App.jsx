@@ -17,6 +17,11 @@ export default function App() {
     // Gérer le résultat du redirect Google
     getRedirectResult(auth).then(result => {
       if (result?.user) {
+        fbSet(`users/${result.user.uid}`, {
+          email: result.user.email,
+          name: result.user.displayName || result.user.email,
+          photo: result.user.photoURL || ""
+        })
         setUser(result.user)
         setAuthState("auth")
       }
@@ -27,7 +32,7 @@ export default function App() {
       if (u) { setUser(u); setAuthState("auth") }
       else   { setUser(null); setAuthState("unauth"); setCurrentTrip(null) }
     })
-  }, [])
+  }, []) // ← accolade fermante du premier useEffect
 
   // Gérer lien d'invitation ?join=TRIP_ID
   useEffect(() => {
