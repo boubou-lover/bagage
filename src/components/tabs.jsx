@@ -208,7 +208,20 @@ export function TabProgramme({ days, setDays, destination }) {
   const addDay    = ()         => setDays([...days,{id:uid(),date:"",events:[],note:"",weather:null}])
   const removeDay = id         => setDays(days.filter(d=>d.id!==id))
   const upDay     = (id,p)     => setDays(days.map(d=>d.id===id?{...d,...p}:d))
-  const addEvent  = (dayId,text,time) => { if(!text.trim())return;setDays(days.map(d=>d.id===dayId?{...d,events:[...(d.events||[]),{id:uid(),text:text.trim(),time}]}:d)) }
+  const addEvent = (dayId, text, time) => {
+  if (!text.trim()) return
+  setDays(days.map(d => {
+    if (d.id !== dayId) return d
+    const events = [...(d.events || []), { id: uid(), text: text.trim(), time }]
+    events.sort((a, b) => {
+      if (!a.time && !b.time) return 0
+      if (!a.time) return 1
+      if (!b.time) return -1
+      return a.time.localeCompare(b.time)
+    })
+    return { ...d, events }
+  }))
+}
   const removeEvent = (dayId,evId)    => setDays(days.map(d=>d.id===dayId?{...d,events:(d.events||[]).filter(e=>e.id!==evId)}:d))
   const loadWeather = async day => { if(!destination||!day.date)return;setWxLoading(p=>({...p,[day.id]:true}));try{const wx=await fetchWeather(destination,day.date);upDay(day.id,{weather:wx})}catch{}setWxLoading(p=>({...p,[day.id]:false})) }
   return (
