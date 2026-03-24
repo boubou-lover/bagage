@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { C } from './constants'
 import { onAuth, fbSet, fbGet, fbSignOut } from './firebase'
-import { getRedirectResult } from 'firebase/auth'
 import { auth } from './firebase'
 import { Spinner } from './components/atoms'
 import AuthScreen from './components/AuthScreen'
@@ -14,19 +13,6 @@ export default function App() {
   const [currentTrip,setCurrentTrip] = useState(null)
 
   useEffect(() => {
-    // Gérer le résultat du redirect Google
-    getRedirectResult(auth).then(result => {
-      if (result?.user) {
-        fbSet(`users/${result.user.uid}`, {
-          email: result.user.email,
-          name: result.user.displayName || result.user.email,
-          photo: result.user.photoURL || ""
-        })
-        setUser(result.user)
-        setAuthState("auth")
-      }
-    }).catch(() => {})
-
     // Auth listener
     onAuth(u => {
       if (u) { setUser(u); setAuthState("auth") }
