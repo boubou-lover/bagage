@@ -7,13 +7,13 @@ import { getStorage, ref as storageRef, uploadBytesResumable,
          getDownloadURL, deleteObject } from 'firebase/storage'
 
 const app = initializeApp({
-  apiKey: "AIzaSyD0Dej5r8xeI0extx-yoM9WoTb2M_bJZvI",
-  authDomain: "bagage-546ed.firebaseapp.com",
-  databaseURL: "https://bagage-546ed-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "bagage-546ed",
-  storageBucket: "bagage-546ed.firebasestorage.app",
-  messagingSenderId: "1018544355738",
-  appId: "1:1018544355738:web:76baa07141ceb6971ea223"
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL:       import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 })
 
 const db      = getDatabase(app)
