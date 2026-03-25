@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { C, CATS, CURRENCIES, PACK_ITEMS, uid, fmt, fetchWeather } from '../constants'
-import { fbListen, fbSet, fbGet } from '../firebase'
+import { fbListen, fbSet, fbGet, uploadFile } from '../firebase'
 import { Input, Sel, Btn, Card, Label, Icon, Tag, Avatar, Spinner, PieChart } from './atoms'
 
 /* ── QR Code ── */
@@ -209,19 +209,19 @@ export function TabProgramme({ days, setDays, destination }) {
   const removeDay = id         => setDays(days.filter(d=>d.id!==id))
   const upDay     = (id,p)     => setDays(days.map(d=>d.id===id?{...d,...p}:d))
   const addEvent = (dayId, text, time) => {
-  if (!text.trim()) return
-  setDays(days.map(d => {
-    if (d.id !== dayId) return d
-    const events = [...(d.events || []), { id: uid(), text: text.trim(), time }]
-    events.sort((a, b) => {
-      if (!a.time && !b.time) return 0
-      if (!a.time) return 1
-      if (!b.time) return -1
-      return a.time.localeCompare(b.time)
-    })
-    return { ...d, events }
-  }))
-}
+    if (!text.trim()) return
+    setDays(days.map(d => {
+      if (d.id !== dayId) return d
+      const events = [...(d.events || []), { id: uid(), text: text.trim(), time }]
+      events.sort((a, b) => {
+        if (!a.time && !b.time) return 0
+        if (!a.time) return 1
+        if (!b.time) return -1
+        return a.time.localeCompare(b.time)
+      })
+      return { ...d, events }
+    }))
+  }
   const removeEvent = (dayId,evId)    => setDays(days.map(d=>d.id===dayId?{...d,events:(d.events||[]).filter(e=>e.id!==evId)}:d))
   const loadWeather = async day => { if(!destination||!day.date)return;setWxLoading(p=>({...p,[day.id]:true}));try{const wx=await fetchWeather(destination,day.date);upDay(day.id,{weather:wx})}catch{}setWxLoading(p=>({...p,[day.id]:false})) }
   return (
@@ -258,11 +258,24 @@ export function TabBudget({ expenses, setExpenses, budget, setBudget, currency, 
   const [travelers,setTravelers] = useState(initTravelers)
   const [newTraveler,setNewTraveler] = useState("")
   const [subTab,setSubTab]       = useState("depenses")
+  const [uploadingReceipt, setUploadingReceipt] = useState(false)
+
   useEffect(()=>{const fm=Object.values(members||{}).map(m=>m.name||m.email||"?");if(fm.length>0)setTravelers(prev=>[...new Set([...fm,...prev])]);},[JSON.stringify(members)])
+
   const total=expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0)
   const bNum=parseFloat(budget)||0,reste=bNum-total,pct=bNum>0?Math.min(100,(total/bNum)*100):0
   const add=()=>{if(!form.label||!form.amount)return;setExpenses([...expenses,{...form,id:uid()}]);setForm({...form,label:"",amount:"",receipt:""})}
-  const handleReceipt=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>setForm(f=>({...f,receipt:ev.target.result}));r.readAsDataURL(f)}
+
+  const handleReceipt = async e => {
+    const f = e.target.files?.[0]; if (!f) return
+    setUploadingReceipt(true)
+    try {
+      const { url } = await uploadFile('receipts', f)
+      setForm(prev => ({ ...prev, receipt: url }))
+    } catch { }
+    setUploadingReceipt(false)
+  }
+
   const byCat=CATS.map(c=>({...c,value:expenses.filter(e=>e.category===c.id).reduce((s,e)=>s+(parseFloat(e.amount)||0),0)})).filter(c=>c.value>0)
   const byDay=days.map((d,i)=>({label:`J${i+1}`,value:expenses.filter(e=>e.dayId===d.id).reduce((s,e)=>s+(parseFloat(e.amount)||0),0)}))
   const byTraveler=travelers.map(t=>({name:t,paid:expenses.filter(e=>e.paidBy===t).reduce((s,e)=>s+(parseFloat(e.amount)||0),0)}))
@@ -297,7 +310,10 @@ export function TabBudget({ expenses, setExpenses, budget, setBudget, currency, 
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}><Input value={form.label} onChange={e=>setForm({...form,label:e.target.value})} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="Description" style={{flex:"1 1 160px"}}/><Input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} onKeyDown={e=>e.key==="Enter"&&add()} placeholder={sym} style={{width:90,flexShrink:0}}/></div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}><Sel value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={{flex:1}}>{CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</Sel><Sel value={form.dayId} onChange={e=>setForm({...form,dayId:e.target.value})} style={{flex:1}}><option value="">— Jour —</option>{days.map((d,i)=><option key={d.id} value={d.id}>Jour {i+1}{d.date?` (${new Date(d.date+"T00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"})})`:""}</option>)}</Sel><Sel value={form.paidBy} onChange={e=>setForm({...form,paidBy:e.target.value})} style={{flex:1}}><option value="">— Payé par —</option>{travelers.map(t=><option key={t} value={t}>{t}</option>)}</Sel></div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <label style={{flex:1,display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:C.surface2,border:`1.5px solid ${C.border}`,borderRadius:10,padding:"8px 12px",fontSize:13,color:C.mutedDark}}>📸 {form.receipt?"Reçu joint ✓":"Joindre un reçu"}<input type="file" accept="image/*" onChange={handleReceipt} style={{display:"none"}}/></label>
+          <label style={{flex:1,display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:C.surface2,border:`1.5px solid ${C.border}`,borderRadius:10,padding:"8px 12px",fontSize:13,color:C.mutedDark}}>
+            📸 {uploadingReceipt ? "Upload…" : form.receipt ? "Reçu joint ✓" : "Joindre un reçu"}
+            <input type="file" accept="image/*" onChange={handleReceipt} style={{display:"none"}}/>
+          </label>
           {form.receipt&&<img src={form.receipt} style={{width:36,height:36,borderRadius:8,objectFit:"cover",flexShrink:0}} alt="reçu"/>}
           <Btn onClick={add} disabled={!form.label||!form.amount}>Ajouter</Btn>
         </div>
@@ -307,13 +323,7 @@ export function TabBudget({ expenses, setExpenses, budget, setBudget, currency, 
           <button key={t.id} onClick={()=>setSubTab(t.id)} style={{flex:1,background:subTab===t.id?C.accentSoft:"white",border:"none",borderRight:i<2?`1px solid ${C.border}`:"none",color:subTab===t.id?C.accent:C.mutedDark,padding:"10px 8px",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:subTab===t.id?700:500}}>{t.l}</button>
         ))}
       </div>
-      {subTab==="depenses"&&<Card>{expenses.length===0&&<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"20px 0"}}>Aucune dépense</div>}{expenses.map(exp=>{const cat=CATS.find(c=>c.id===exp.category);const dayIdx=days.findIndex(d=>d.id===exp.dayId);return(<div key={exp.id} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:`1px solid ${C.border}`}}><span style={{width:34,height:34,borderRadius:10,background:cat?.soft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{cat?.icon}</span><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:500}}>{exp.label}</div><div style={{display:"flex",gap:5,marginTop:3,flexWrap:"wrap"}}>{dayIdx>=0&&<Tag color={C.accent} soft={C.accentSoft}>J{dayIdx+1}</Tag>}{exp.paidBy&&<Tag color={C.purple} soft={C.purpleSoft}>{exp.paidBy}</Tag>}</div></div>{exp.receipt&&<img
-    src={exp.receipt}
-    style={{ width: 30, height: 30, borderRadius: 6, objectFit: "cover", flexShrink: 0, cursor: "pointer" }}
-    alt="reçu"
-    loading="lazy"
-    onClick={() => window.open(exp.receipt, "_blank")}
-  />}<span style={{fontWeight:700,color:cat?.color,minWidth:55,textAlign:"right",flexShrink:0}}>{fmt(parseFloat(exp.amount)||0,sym)}</span><button onClick={()=>setExpenses(expenses.filter(e=>e.id!==exp.id))} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:18}}>×</button></div>)})}</Card>}
+      {subTab==="depenses"&&<Card>{expenses.length===0&&<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"20px 0"}}>Aucune dépense</div>}{expenses.map(exp=>{const cat=CATS.find(c=>c.id===exp.category);const dayIdx=days.findIndex(d=>d.id===exp.dayId);return(<div key={exp.id} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:`1px solid ${C.border}`}}><span style={{width:34,height:34,borderRadius:10,background:cat?.soft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{cat?.icon}</span><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:500}}>{exp.label}</div><div style={{display:"flex",gap:5,marginTop:3,flexWrap:"wrap"}}>{dayIdx>=0&&<Tag color={C.accent} soft={C.accentSoft}>J{dayIdx+1}</Tag>}{exp.paidBy&&<Tag color={C.purple} soft={C.purpleSoft}>{exp.paidBy}</Tag>}</div></div>{exp.receipt&&<img src={exp.receipt} style={{width:30,height:30,borderRadius:6,objectFit:"cover",flexShrink:0,cursor:"pointer"}} alt="reçu" loading="lazy" onClick={()=>window.open(exp.receipt,"_blank")}/>}<span style={{fontWeight:700,color:cat?.color,minWidth:55,textAlign:"right",flexShrink:0}}>{fmt(parseFloat(exp.amount)||0,sym)}</span><button onClick={()=>setExpenses(expenses.filter(e=>e.id!==exp.id))} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:18}}>×</button></div>)})}</Card>}
       {subTab==="stats"&&<div>{byCat.length>0&&<Card><Label>Par catégorie</Label><div style={{display:"flex",alignItems:"center",gap:20}}><PieChart data={byCat} size={120}/><div style={{flex:1}}>{byCat.map(c=>(<div key={c.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{width:10,height:10,borderRadius:3,background:c.color,flexShrink:0}}/><span style={{flex:1,fontSize:13}}>{c.icon} {c.label}</span><span style={{color:c.color,fontWeight:700,fontSize:13}}>{fmt(c.value,sym)}</span><span style={{color:C.muted,fontSize:11,minWidth:28,textAlign:"right"}}>{total>0?((c.value/total)*100).toFixed(0):0}%</span></div>))}</div></div></Card>}{byDay.some(d=>d.value>0)&&<Card><Label>Par jour</Label>{byDay.filter(d=>d.value>0).map((d,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}><span style={{fontSize:13,color:C.mutedDark,minWidth:32,fontWeight:600}}>{d.label}</span><div style={{flex:1,height:6,borderRadius:3,background:C.border,overflow:"hidden"}}><div style={{height:"100%",borderRadius:3,background:C.accent,width:total>0?`${(d.value/total)*100}%`:"0%",transition:"width .4s"}}/></div><span style={{fontWeight:700,color:C.accent,fontSize:13,minWidth:55,textAlign:"right"}}>{fmt(d.value,sym)}</span></div>))}</Card>}</div>}
       {subTab==="partage"&&<Card><Label>Partage des dépenses</Label>{travelers.length<2?<div style={{color:C.muted,fontSize:13}}>Ajoute au moins 2 voyageurs.</div>:(()=>{const share=total/travelers.length;return(<><div style={{fontSize:13,color:C.mutedDark,marginBottom:14,padding:"10px 14px",background:C.yellowSoft,borderRadius:10,border:"1px solid #fde68a"}}>Part équitable : <b style={{color:C.yellow}}>{fmt(share,sym)}</b> / personne</div>{byTraveler.map(t=>{const diff=t.paid-share;return(<div key={t.name} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:`1px solid ${C.border}`}}><span style={{width:34,height:34,borderRadius:"50%",background:C.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>👤</span><div style={{flex:1}}><div style={{fontWeight:600,fontSize:14}}>{t.name}</div><div style={{fontSize:12,color:C.muted}}>Payé : {fmt(t.paid,sym)}</div></div><div style={{textAlign:"right"}}><div style={{fontWeight:800,fontSize:15,color:diff>=0?C.green:C.red}}>{diff>=0?"+":""}{fmt(diff,sym)}</div><div style={{fontSize:11,color:C.muted}}>{diff>=0?"à recevoir":"doit payer"}</div></div></div>)})}</>)})()}</Card>}
     </div>
@@ -435,7 +445,6 @@ export function TabBagages({ checked, setChecked, customItems={}, setCustomItems
 }
 
 /* ── Tab Info ── */
-/* ── Constantes locales ── */
 const PLACE_CATS = [
   { id: "hebergement", label: "Hébergement", icon: "🏨", color: "#0d9488" },
   { id: "restaurant",  label: "Restaurant",  icon: "🍽️", color: "#ea580c" },
@@ -443,7 +452,7 @@ const PLACE_CATS = [
   { id: "shopping",    label: "Shopping",    icon: "🛍️", color: "#dc2626" },
   { id: "contact",     label: "Contact",     icon: "👤", color: "#2563eb" },
   { id: "autre",       label: "Autre",       icon: "📍", color: "#64748b" },
-  ]
+]
 const TRANSPORT_TYPES = [
   { id: "avion",   label: "Avion",    icon: "✈️" },
   { id: "train",   label: "Train",    icon: "🚄" },
@@ -453,7 +462,6 @@ const TRANSPORT_TYPES = [
   { id: "autre",   label: "Autre",    icon: "🚀" },
 ]
 
-/* Géocode une adresse via Nominatim (OSM) */
 async function geocode(query) {
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
@@ -464,7 +472,6 @@ async function geocode(query) {
   return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), display: d[0].display_name }
 }
 
-/* ── Carte Leaflet ── */
 function InfoMap({ places }) {
   const mapRef     = useRef(null)
   const mapObj     = useRef(null)
@@ -472,38 +479,25 @@ function InfoMap({ places }) {
 
   useEffect(() => {
     if (!mapRef.current || mapObj.current) return
-
     const init = () => {
       const L = window.L
       if (!L || !mapRef.current) return
-      mapObj.current = L.map(mapRef.current, {
-        zoomControl: true,
-        scrollWheelZoom: false
-      })
+      mapObj.current = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
-        maxZoom: 19
+        attribution: "© OpenStreetMap contributors", maxZoom: 19
       }).addTo(mapObj.current)
       setTimeout(() => mapObj.current?.invalidateSize(), 100)
     }
-
-    if (window.L) {
-      init()
-    } else {
+    if (window.L) { init() } else {
       const existing = document.querySelector('script[src*="leaflet"]')
-      if (existing) {
-        existing.addEventListener('load', init)
-      } else {
+      if (existing) { existing.addEventListener('load', init) } else {
         const s = document.createElement('script')
         s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
         s.onload = init
         document.head.appendChild(s)
       }
     }
-
-    return () => {
-      if (mapObj.current) { mapObj.current.remove(); mapObj.current = null }
-    }
+    return () => { if (mapObj.current) { mapObj.current.remove(); mapObj.current = null } }
   }, [])
 
   useEffect(() => {
@@ -514,7 +508,7 @@ function InfoMap({ places }) {
     const valid = places.filter(p => p.lat && p.lng)
     if (!valid.length) return
     valid.forEach(p => {
-      const cat = PLACE_CATS.find(c => c.id === p.category) || PLACE_CATS[6]
+      const cat = PLACE_CATS.find(c => c.id === p.category) || PLACE_CATS[5]
       const icon = L.divIcon({
         className: "",
         html: `<div style="background:${cat.color};color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:2px solid white;">${cat.icon}</div>`,
@@ -547,7 +541,6 @@ function InfoMap({ places }) {
   )
 }
 
-/* ── Formulaire d'ajout/édition d'une adresse ── */
 function PlaceForm({ initial, onSave, onCancel }) {
   const [form, setForm]           = useState(initial || { name: "", address: "", category: "hebergement", note: "", tel: "" })
   const [geocoding, setGeocoding] = useState(false)
@@ -582,16 +575,10 @@ function PlaceForm({ initial, onSave, onCancel }) {
           <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Note</div>
           <Input value={form.note || ""} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Chambre 204, code #1234…"/>
         </div>
-        {/* ── Téléphone (hébergement, restaurant, contact) ── */}
         {["hebergement", "restaurant", "contact"].includes(form.category) && (
           <div style={{ gridColumn: "1/-1" }}>
             <div style={{ fontSize: 11, color: C.mutedDark, marginBottom: 4, fontWeight: 600 }}>Téléphone</div>
-            <Input
-              type="tel"
-              value={form.tel || ""}
-              onChange={e => setForm(f => ({ ...f, tel: e.target.value }))}
-              placeholder="+81 3 1234 5678"
-            />
+            <Input type="tel" value={form.tel || ""} onChange={e => setForm(f => ({ ...f, tel: e.target.value }))} placeholder="+81 3 1234 5678"/>
           </div>
         )}
         <div style={{ gridColumn: "1/-1" }}>
@@ -623,10 +610,21 @@ function PlaceForm({ initial, onSave, onCancel }) {
 function TransportForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial || {
     type: "avion", numero: "", compagnie: "", depart: "", arrivee: "",
-    heureDepart: "", heureArrivee: "", terminal: "", note: ""
+    heureDepart: "", heureArrivee: "", terminal: "", note: "", ticketImage: null
   })
+  const [uploadingTicket, setUploadingTicket] = useState(false)
   const t = TRANSPORT_TYPES.find(t => t.id === form.type) || TRANSPORT_TYPES[0]
   const isValid = form.depart.trim() && form.arrivee.trim()
+
+  const handleTicket = async e => {
+    const f = e.target.files?.[0]; if (!f) return
+    setUploadingTicket(true)
+    try {
+      const { url } = await uploadFile('tickets', f)
+      setForm(f => ({ ...f, ticketImage: url }))
+    } catch { }
+    setUploadingTicket(false)
+  }
 
   return (
     <div style={{ background: C.surface2, border: `1.5px solid #0ea5e930`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
@@ -680,11 +678,8 @@ function TransportForm({ initial, onSave, onCancel }) {
           background: C.surface2, border: `1.5px solid ${C.border}`, borderRadius: 10,
           padding: "8px 12px", fontSize: 13, color: C.mutedDark
         }}>
-          📸 {form.ticketImage ? "Ticket joint ✓" : "Joindre ticket / QR code"}
-          <input type="file" accept="image/*" onChange={e => {
-            const f = e.target.files?.[0]; if (!f) return
-            const r = new FileReader(); r.onload = ev => setForm(f => ({ ...f, ticketImage: ev.target.result })); r.readAsDataURL(f)
-          }} style={{ display: "none" }}/>
+          📸 {uploadingTicket ? "Upload…" : form.ticketImage ? "Ticket joint ✓" : "Joindre ticket / QR code"}
+          <input type="file" accept="image/*" onChange={handleTicket} style={{ display: "none" }}/>
         </label>
         {form.ticketImage && (
           <div style={{ position: "relative", flexShrink: 0 }}>
@@ -701,7 +696,7 @@ function TransportForm({ initial, onSave, onCancel }) {
           <b style={{ color: C.yellow }}>Fonctionnalité expérimentale</b>
         </div>
         <div style={{ lineHeight: 1.5 }}>
-          L'image est stockée dans Firebase et <b>visible par tous les membres du voyage</b>. Ne partage pas de documents contenant des <b>données bancaires, mots de passe ou informations sensibles</b>. Privilégie les QR codes et codes-barres de billets.
+          L'image est stockée sur Cloudinary et <b>visible par tous les membres du voyage</b>. Ne partage pas de documents contenant des <b>données bancaires, mots de passe ou informations sensibles</b>. Privilégie les QR codes et codes-barres de billets.
         </div>
       </div>
 
@@ -781,9 +776,6 @@ function TransportCard({ transport, onEdit, onDelete, onToggle, expanded }) {
                 style={{ maxWidth: "100%", borderRadius: 10, border: `1px solid ${C.border}`, display: "block", cursor: "pointer" }}
                 onClick={() => window.open(transport.ticketImage, "_blank")}
               />
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 6, padding: "6px 8px", background: C.yellowSoft, borderRadius: 6, border: "1px solid #fde68a", lineHeight: 1.5 }}>
-                🧪 Expérimental · Cliquer pour agrandir · <b style={{ color: C.yellow }}>Visible par tous les membres</b> — ne pas partager de données sensibles
-              </div>
             </div>
           )}
           <div style={{ display: "flex", gap: 8 }}>
@@ -796,9 +788,8 @@ function TransportCard({ transport, onEdit, onDelete, onToggle, expanded }) {
   )
 }
 
-/* ── Carte compacte d'une adresse (liste) ── */
 function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
-  const cat = PLACE_CATS.find(c => c.id === place.category) || PLACE_CATS[6]
+  const cat = PLACE_CATS.find(c => c.id === place.category) || PLACE_CATS[5]
   return (
     <div style={{
       background: "white", border: `1.5px solid ${expanded ? cat.color + "60" : C.border}`,
@@ -806,7 +797,6 @@ function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
       boxShadow: expanded ? `0 4px 16px ${cat.color}18` : C.shadow,
       transition: "border-color .2s, box-shadow .2s"
     }}>
-      {/* En-tête cliquable */}
       <div onClick={onToggle} style={{
         display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
         cursor: "pointer", background: expanded ? cat.color + "08" : "white",
@@ -833,7 +823,6 @@ function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
         }}>⌄</span>
       </div>
 
-      {/* Détail déplié */}
       {expanded && (
         <div style={{ borderTop: `1px solid ${cat.color}20`, padding: "14px 16px", background: cat.color + "04" }}>
           {place.address && (
@@ -848,31 +837,23 @@ function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
               <div style={{ fontSize: 13, color: C.textSoft, fontStyle: "italic" }}>{place.note}</div>
             </div>
           )}
-          {/* ── Téléphone cliquable ── */}
           {place.tel && (
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Téléphone</div>
-              <a href={`tel:${place.tel}`}
-                style={{ fontSize: 13, color: C.teal, fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <a href={`tel:${place.tel}`} style={{ fontSize: 13, color: C.teal, fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
                 📞 {place.tel}
               </a>
             </div>
           )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {place.address && (
-              <button
-                onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(place.address)}`, "_blank")}
-                style={{ fontSize: 12, color: C.accent, background: C.accentSoft, border: `1px solid #bfdbfe`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "inherit", fontWeight: 600 }}
-              >
+              <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(place.address)}`, "_blank")}
+                style={{ fontSize: 12, color: C.accent, background: C.accentSoft, border: `1px solid #bfdbfe`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "inherit", fontWeight: 600 }}>
                 🗺️ Ouvrir dans Maps
               </button>
             )}
-            <button onClick={onEdit} style={{ fontSize: 12, color: C.textSoft, background: "white", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
-              ✏️ Modifier
-            </button>
-            <button onClick={onDelete} style={{ fontSize: 12, color: C.red, background: C.redSoft, border: `1px solid #fecaca`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
-              🗑 Supprimer
-            </button>
+            <button onClick={onEdit} style={{ fontSize: 12, color: C.textSoft, background: "white", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>✏️ Modifier</button>
+            <button onClick={onDelete} style={{ fontSize: 12, color: C.red, background: C.redSoft, border: `1px solid #fecaca`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>🗑 Supprimer</button>
           </div>
         </div>
       )}
@@ -880,7 +861,6 @@ function PlaceCard({ place, onEdit, onDelete, onToggle, expanded }) {
   )
 }
 
-/* ── Tab Info principal ── */
 export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }) {
   const upd = (k, v) => setInfo(p => ({ ...p, [k]: v }))
 
@@ -945,8 +925,6 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
 
   return (
     <div className="fade-up" style={{ paddingBottom: 160 }}>
-
-      {/* ── Toggle Devises ── */}
       <Card style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
@@ -960,10 +938,8 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
         </div>
       </Card>
 
-      {/* ── Carte Leaflet ── */}
       {allItems.some(p => p.lat) && <InfoMap places={allItems.filter(p => p.lat)}/>}
 
-      {/* ── Transports ── */}
       {transports.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
@@ -973,7 +949,6 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
         </div>
       )}
 
-      {/* ── Lieux ── */}
       {places.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
@@ -983,11 +958,9 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
         </div>
       )}
 
-      {/* Formulaire actif */}
       {showForm === "lieu"      && editIdx === null && <PlaceForm     onSave={saveItem} onCancel={() => setShowForm(null)}/>}
       {showForm === "transport" && editIdx === null && <TransportForm onSave={saveItem} onCancel={() => setShowForm(null)}/>}
 
-      {/* Vide state */}
       {allItems.length === 0 && !showForm && (
         <div style={{ textAlign: "center", padding: "28px 20px", color: C.muted, background: "white", borderRadius: 14, border: `1.5px dashed ${C.border}`, marginBottom: 14 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🗺️</div>
@@ -996,7 +969,6 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
         </div>
       )}
 
-      {/* ── Sections dépliables ── */}
       <div style={{ marginTop: 6 }}>
         {SECTIONS.map(sec => (
           <div key={sec.key} style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 10, overflow: "hidden", boxShadow: C.shadow }}>
@@ -1025,7 +997,6 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
         ))}
       </div>
 
-      {/* ── Deux boutons fixes en bas ── */}
       {!showForm && editIdx === null && (
         <div style={{
           position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
@@ -1054,7 +1025,6 @@ export function TabInfo({ info, setInfo, currency, withDevises, setWithDevises }
   )
 }
 
-/* ── Tab Convertisseur ── */
 export function TabConvertisseur({ currency }) {
   const [amount,setAmount] = useState("100")
   const [from,setFrom]     = useState("EUR")
