@@ -74,12 +74,16 @@ export default function TripListScreen({ user, onSelectTrip, onSignOut }) {
   }
 
   const deleteTrip = async (e, trip) => {
-    e.stopPropagation()
-    if (!window.confirm(`Supprimer le voyage "${trip.destination||trip.name}" ? Cette action est irréversible.`)) return
-    await fbSet(`trips/${trip.id}`, null)
-    const members = trip.members||{}
-    await Promise.all(Object.keys(members).map(uid => fbSet(`userTrips/${uid}/${trip.id}`, null)))
+  e.stopPropagation()
+  if (trip.ownerId !== user.uid) {
+    alert("Seul le créateur du voyage peut le supprimer.")
+    return
   }
+  if (!window.confirm(`Supprimer le voyage "${trip.destination||trip.name}" ? Cette action est irréversible.`)) return
+  await fbSet(`trips/${trip.id}`, null)
+  const members = trip.members||{}
+  await Promise.all(Object.keys(members).map(uid => fbSet(`userTrips/${uid}/${trip.id}`, null)))
+}
 
   const displayName = user.displayName || user.email?.split("@")[0] || "Voyageur"
 
@@ -193,8 +197,10 @@ export default function TripListScreen({ user, onSelectTrip, onSignOut }) {
                       {trip.members&&Object.keys(trip.members).length>1&&<Tag color={C.purple} soft={C.purpleSoft}>👥 {Object.keys(trip.members).length} membres</Tag>}
                     </div>
                   </div>
-                  <button onClick={e=>deleteTrip(e,trip)}
+                  {trip.ownerId===user.uid && (
+                    <button onClick={e=>deleteTrip(e,trip)}
                     style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:18,padding:"4px",flexShrink:0}}>🗑</button>
+)}
                 </div>
               ))
         }
