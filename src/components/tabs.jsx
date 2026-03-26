@@ -267,14 +267,11 @@ export function TabBudget({ expenses, setExpenses, budget, setBudget, currency, 
   const add=()=>{if(!form.label||!form.amount)return;setExpenses([...expenses,{...form,id:uid()}]);setForm({...form,label:"",amount:"",receipt:""})}
 
   const handleReceipt = async e => {
-    const f = e.target.files?.[0]; if (!f) return
-    setUploadingReceipt(true)
-    try {
-      const { url } = await uploadFile('receipts', f)
-      setForm(prev => ({ ...prev, receipt: url }))
-    } catch { }
-    setUploadingReceipt(false)
-  }
+  const f = e.target.files?.[0]; if (!f) return
+  if (f.size > 10*1024*1024) { alert("Fichier trop grand (max 10 Mo)"); return }  // ← ajouter
+  setUploadingReceipt(true)
+  // ...
+}
 
   const byCat=CATS.map(c=>({...c,value:expenses.filter(e=>e.category===c.id).reduce((s,e)=>s+(parseFloat(e.amount)||0),0)})).filter(c=>c.value>0)
   const byDay=days.map((d,i)=>({label:`J${i+1}`,value:expenses.filter(e=>e.dayId===d.id).reduce((s,e)=>s+(parseFloat(e.amount)||0),0)}))
@@ -617,14 +614,11 @@ function TransportForm({ initial, onSave, onCancel }) {
   const isValid = form.depart.trim() && form.arrivee.trim()
 
   const handleTicket = async e => {
-    const f = e.target.files?.[0]; if (!f) return
-    setUploadingTicket(true)
-    try {
-      const { url } = await uploadFile('tickets', f)
-      setForm(f => ({ ...f, ticketImage: url }))
-    } catch { }
-    setUploadingTicket(false)
-  }
+  const f = e.target.files?.[0]; if (!f) return
+  if (f.size > 10*1024*1024) { alert("Fichier trop grand (max 10 Mo)"); return }  // ← ajouter
+  setUploadingTicket(true)
+  // ...
+}
 
   return (
     <div style={{ background: C.surface2, border: `1.5px solid #0ea5e930`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
