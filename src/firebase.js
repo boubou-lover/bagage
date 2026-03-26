@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'  // ← nouveau
 import { getDatabase, ref, onValue, set, get, update } from 'firebase/database'
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
          createUserWithEmailAndPassword, signInWithPopup,
@@ -14,6 +15,12 @@ const app = initializeApp({
   storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+})
+
+// ← nouveau
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
+  isTokenAutoRefreshEnabled: true
 })
 
 const db      = getDatabase(app)
@@ -32,7 +39,7 @@ export const fbListen = (path, cb)   => onValue(ref(db, path), snap => cb(snap.v
 
 export const signInEmail     = (e, p) => signInWithEmailAndPassword(auth, e, p)
 export const signUpEmail     = (e, p) => createUserWithEmailAndPassword(auth, e, p)
-export const signInGoogle = () => signInWithPopup(auth, gp)
+export const signInGoogle    = ()     => signInWithPopup(auth, gp)
 export const fbSignOut       = ()     => signOut(auth)
 export const fbUpdateProfile = (u, d) => updateProfile(u, d)
 export const onAuth          = (cb)   => onAuthStateChanged(auth, cb)
