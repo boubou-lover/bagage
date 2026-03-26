@@ -43,13 +43,21 @@ export default function TabDocs({ tripId, user }) {
   }
 
   const addUrl = async () => {
-    if (!urlForm.label.trim()||!urlForm.url.trim()) return
-    let url = urlForm.url.trim()
-    if (!url.startsWith("http")) url = "https://"+url
-    const doc = {id:uid(), label:urlForm.label.trim(), url, type:"link", uploadedBy:user.displayName||user.email, createdAt:Date.now()}
-    await saveDoc(doc)
-    setUrlForm({label:"",url:""}); setShowUrlForm(false)
+  if (!urlForm.label.trim()||!urlForm.url.trim()) return
+  let url = urlForm.url.trim()
+  if (!url.startsWith("http")) url = "https://"+url
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      setError("URL invalide — seuls les liens http/https sont autorisés."); return
+    }
+  } catch {
+    setError("URL invalide."); return
   }
+  const doc = {id:uid(), label:urlForm.label.trim(), url, type:"link", uploadedBy:user.displayName||user.email, createdAt:Date.now()}
+  await saveDoc(doc)
+  setUrlForm({label:"",url:""}); setShowUrlForm(false)
+}
 
   const typeIcon  = type => { if(type==="image") return <Icon name="Image" size={20} color={C.purple}/>; if(type==="pdf") return <Icon name="FileText" size={20} color={C.red}/>; if(type==="link") return <Icon name="Link" size={20} color={C.sky}/>; return <Icon name="File" size={20} color={C.muted}/> }
   const typeSoft  = type => ({image:C.purpleSoft,pdf:C.redSoft,link:C.skySoft}[type]||"#f8fafc")
